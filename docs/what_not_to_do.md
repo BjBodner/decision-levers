@@ -3,9 +3,11 @@
 The negative results behind the DON'T rules, with the paper's numbers. All results are for Jev 1.13 (a small
 Jev 1.14 check is summarised in the README). Evidence levels:
 
-- **Confirmatory**: a pre-registered test in Run 1 (held-out test items), Run 2 (items never sent before) or Run 3
-  (fresh items of four further datasets, deposited publicly before the first call, gold-class clusters), frozen
-  by a hash before any call, Holm-corrected. A non-inferiority result is written "no more than X points below".
+- **Confirmatory**: a pre-registered test in Run 1 (held-out test items), Run 2 (items never sent before), Run 3
+  (fresh items of four further datasets, deposited publicly before the first call, gold-class clusters) or Run 4
+  (fresh items of three further datasets, frozen internally, gold-class clusters), frozen by a hash before any
+  call, Holm-corrected. A non-inferiority result is written "no more than X points below".
+- **Secondary**: a pre-specified estimate without a decision.
 - **Exploratory**: development screens or analyses after the test labels were unsealed. Treat these as hypotheses
   to check on your own data.
 
@@ -36,7 +38,8 @@ your data.
 
 ## 2. Wrong labels in the pool
 
-Wrong labels remove information, and the harm grows with each correct example relabelled.
+Wrong labels remove correct evidence and add evidence for a rival, and the harm grows with each correct example
+relabelled.
 
 - Wrong labels on the three nearest shown examples: Banking77 93.6 → 60.1 (−33.5 [−38.8, −28.5]); financial
   tweets 78.6 → 65.2 (−13.4 [−15.9, −11.0]). **Confirmatory** (Run 1).
@@ -45,6 +48,12 @@ Wrong labels remove information, and the harm grows with each correct example re
   Descriptively, relabelling one, two and three of three cost 2.9, 11.4 and 38.2 points (steps −2.9, −8.5,
   −26.8): the loss grows, so "linear" or "in proportion" is not supported. Most of the harm comes when the last
   correct example goes.
+- Why (fresh items of MASSIVE, LEDGAR and MetaTool, 1,057 items showing three correct examples): deleting k
+  correct examples cost less than relabelling them to distinct rivals (+13.1 [+11.7, +14.7], mean over k = 1 to 3);
+  relabelling them to one common rival cost more than to distinct rivals (−13.2 [−14.7, −11.7], k = 2, 3); and
+  deletion alone jumped at the last correct example (+10.1 [+7.5, +12.7]). **Confirmatory** (Run 4: X3a-c).
+  With all three changed, accuracy fell 19.4 points when they were deleted, 47.0 when relabelled to distinct
+  rivals and 67.2 when relabelled to one rival (descriptive).
 - The same corruption on a nearest-neighbour vote over the shown examples was far worse (Banking77 −71.5,
   tweets −39.5). **Exploratory.**
 - Observationally, about 21 points per displaced gold example on Banking77 and 10 on tweets. **Exploratory.** A separate effect of rank at matched evidence was **not confirmed**
@@ -145,5 +154,10 @@ Treat the state as untrusted input. Enforce permissions outside the model.
   points below the prompt's lowest class recall: 58.9 against 68.7 (Run 2 items) and 52.6 against 68.8 (Run 3
   items); intervals cross 0. **Exploratory.**
 - Any expert in a product can veto a class: a near-zero vote or classifier probability outweighs a right bare call.
+- On a time split (CFPB: a 2025 pool of 800 complaints at natural shares, 2,000 complaints received in 2026), the
+  combination fell 10.9 [9.5, 12.2] points below the prompt in accuracy and 12.8 in macro-F1, and collapsed on the
+  classes with 5 to 8 pool examples (payday-loan recall 17.3% against 71.6%). The retrieval prompt itself gave no
+  gain over the bare call there (+0.05 [−0.6, +0.8]). **Secondary** (Run 4).
 
-Report per-class recall (`evaluate.class_metrics`) next to accuracy before swapping the prompt for the combination.
+Report per-class recall (`evaluate.class_metrics`) next to accuracy before swapping the prompt for the combination,
+and score it on recent held-out items when the pool is older than the traffic.

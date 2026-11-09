@@ -3,6 +3,21 @@
 ## 0.2.0 (unreleased)
 
 Synced with the paper's v11: Run 3 results, corrected numbers, and the repo critique of the practitioner review.
+Then synced with v12: Run 4 results.
+
+**Run 4 (paper v12)**
+
+- README: the Run 4 rows of the results table. X3a-c confirmed (deletion costs less than relabelling; one common
+  rival costs more than distinct rivals; deletion jumps at the last correct example). X1a and X1b not shown
+  non-inferior on MASSIVE, LEDGAR and MetaTool. Secondary: tempered product −0.4, SuperICL below the prompt, pool
+  redraws (G5's sign not stable), and the CFPB time split (no gain from retrieval with a 2025 natural-share pool on
+  2026 items).
+- Decision guide matched to the paper's Section 9: the bare call × centroid tip is dropped, the 5-per-class product
+  is "not established", the 100-per-class branch adds Run 4 and the pool redraws, a time-split caution is added,
+  wrong labels are explained as lost correct evidence plus rival evidence (C4), and "confirm before you ship" notes
+  the paper's test sizes.
+- `docs/why_it_works.md`: Run 4's out-of-sample check of the fitted model. `docs/what_not_to_do.md`: X3a-c and the
+  time split.
 
 **Added**
 

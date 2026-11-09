@@ -56,18 +56,25 @@ correctly labelled shown examples were relabelled):
 - **Wrong labels on the nearest examples (tweets).** It underpredicts the harm: −4.6 points against −13.4 observed.
 - **Planted near-copies.** It misses in both directions: after one wrong-labelled plant, 83.5% predicted against
   73.8% observed on Banking77-20, and 15.5% against 49.5% on tweets. The external embedding is the likely culprit.
-- **Two rival accounts are not ruled out**: that the growing loss comes from losing the last correct example, or
-  from evidence piling up on rivals. The paper's fourth run is designed to separate them (deletion vs relabelling);
-  its results are added on publication.
+- **Rival evidence (Run 4).** The paper's fourth run separated the two accounts of the growing loss, losing the
+  last correct example and evidence piling up on rivals, and confirmed both (deletion costs less than relabelling,
+  X3a; one common rival costs more than distinct rivals, X3b; deletion alone jumps at the last correct example,
+  X3c). Applied without refitting to those 1,057 items, the model predicted the sign of every contrast, pooled and
+  on each dataset, and the size of the deletion jump, but only about half of the two rival effects: with three
+  correct examples deleted, 69.9% predicted against 75.9% observed; with two relabelled to one rival, 84.3% against
+  74.2%. In the model's terms, Jev weighs a rival's accumulating evidence more steeply than the concave log-sum
+  allows.
 
 ## What it does not license
 
 - It is not a mechanism. It is a four-parameter curve that reproduces one pooled shape out of sample.
 - It does not say the local combination in this package (`combine(bare, vote, lr)`) is what Jev does internally.
   That product has the same prior × evidence shape and was no more than 1.5 points below the retrieval prompt on
-  tweets and complaints (non-inferior, Run 2), but it trailed on Banking77, CLINC150 and ToxicChat (exploratory).
+  tweets and complaints (non-inferior, Run 2), but it trailed on Banking77, CLINC150 and ToxicChat (exploratory),
+  and it was not shown non-inferior on MASSIVE, LEDGAR and MetaTool (Run 4).
   The tempered exponents (`PAPER_EXPONENTS`) are a fitted stacker, not estimates of `a` and `β`: the bare
   exponent was lowest on Banking77 (0.18) and 0.32 to 0.54 elsewhere, with no intent-versus-topical split.
 - It was fitted and tested on one model version (Jev 1.13).
 
-Source: paper Section 6 and Figure 6; analysis notes `round13/free_analyses.md` (A1, A2).
+Source: paper Section 6, Figure 6 and Table 4; analysis notes `round13/free_analyses.md` (A1, A2); Run 4 prediction
+in `r14_x3_mechanism_prediction.csv` of the research package.

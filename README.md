@@ -14,27 +14,36 @@ capitals, unrelated questions packed alongside), stayed within ±2 accuracy poin
 examples, shuffled shares) hurt. With enough labels, prior and evidence can also be combined outside the prompt, by
 multiplying one bare call by local models; whether that is good enough for your data is something to measure on
 your data. This package implements each approach the paper tested on TypeSafe Jev 1.13, plus the evaluation
-protocol that tells real effects from noise. Results come from three pre-registered runs (22 of 24 tests passed),
+protocol that tells real effects from noise. Results come from four pre-registered runs (25 of 29 tests passed),
 the third deposited publicly before its first call.
 
 ## Which approach?
 
-The label budget decides where to combine the model's prior and the evidence. **C1/C2/C3** = confirmed in Run
-1/2/3; **E** = exploratory; "item-level" = not confirmed under class clustering.
+The label budget decides where to combine the model's prior and the evidence. **C1/C2/C3/C4** = confirmed in Run
+1/2/3/4; **E** = exploratory; "item-level" = not confirmed under class clustering.
 
 **How many labelled examples per class do you have?**
 
 - **About 5.** Put the nearest labelled examples in the prompt (`add_examples`). Run 2: +3.6 and +2.1 points over
   the bare call and +17.3 and +16.1 over a tuned classifier on tweets and complaints (C2, item-level). Run 3, four
   more datasets: +2.1 [+0.0, +4.1] over the bare call and +10.8 over a tuned classifier (secondary, no decision).
-  Also try the bare call × a nearest centroid: post hoc it did 2.1 points better than the prompt (E; `combine`
-  takes any local model's probabilities).
+  Run 4, three more datasets: +2.9 [+0.7, +4.9] over the bare call and +9.1 [+7.3, +11.2] over a tuned classifier
+  (secondary). A bare call multiplied by a local classifier was not shown non-inferior to the prompt on those three
+  datasets (Run 4: X1a), so its standing at this budget is not established.
 - **About 100.** Compare one bare call × a kNN vote × a tuned classifier (`combine(bare, vote, lr)`, run on your
   machine) with the prompt **on your own held-out data** (`examples/11`). It was no more than 1.5 points below the
   prompt on tweets and complaints (non-inferior; C2, item-level); on fresh items of four further datasets it was
-  inconclusive (Run 3). It sends only the item. **Small-class caveat:** on CFPB its recall on the smallest class
-  was 10 to 16 points below the prompt's lowest class recall (E; intervals cross 0), so compare per-class recall,
-  not just accuracy (`evaluate.class_metrics`).
+  inconclusive (Run 3), and on three further datasets it was not shown non-inferior (Run 4: X1b). Across six pool
+  draws of the Run 2 items the difference was above −1.5 every time but on both sides of zero (Run 4, secondary),
+  so one pool draw is not enough to decide. It sends only the item. **Small-class caveat:** on CFPB its recall on
+  the smallest class was 10 to 16 points below the prompt's lowest class recall (E; intervals cross 0), so compare
+  per-class recall, not just accuracy (`evaluate.class_metrics`).
+- **Time-split caution.** If your labelled pool is older than the traffic you will score, and holds the natural
+  class mix (a handful of examples for the tail classes), check both approaches on recent held-out items before
+  choosing. On CFPB, with a 2025 pool of 800 complaints at natural shares and 2,000 complaints received in 2026,
+  the retrieval prompt gave no gain over the bare call (+0.05 [−0.6, +0.8]), and the local combination fell 10.9
+  points below the prompt, with 17.3% recall on payday loans (7 pool examples; Run 4, secondary). The class mix had
+  shifted too: credit reporting was 75.8% of the 2025 complaints and 3.0% of the 2026 test items.
 - **If vendor calls must be cut:** a classifier-first cascade (`ClassifierFirstCascade`). The local classifier
   answers the items it is sure of; **the other items go to the prompt with their nearest labelled examples**, so a
   cascade reduces what leaves your machine but does not remove pool text. On ToxicChat it sent 8% of items and was
@@ -46,10 +55,17 @@ The label budget decides where to combine the model's prior and the evidence. **
 - **Always:** define cryptic option names (no more than 2 points below readable names on average, C1, C3; LEDGAR
   2.4 below). **Use class shares only if live traffic matches them** (+1.9 over none, C2, item-level); otherwise
   re-estimate them and correct the bare answer after the call (E). Both routes trade minority recall for accuracy
-  and lost 5 to 8 points under a shifted class mix (E). **Confirm before you ship** (`examples/09`).
+  and lost 5 to 8 points under a shifted class mix (E). **Confirm before you ship** (`examples/09`): held-out items
+  de-duplicated against the pool, content-free controls, analysis frozen before testing. The paper's tests used
+  938 to 3,424 items; a team with 5 labels per class may not have that many, and should read the 5-per-class rule
+  as the paper's confirmation, not theirs (E).
 - **Never:** expect a persona, politeness, capitals or packed unrelated questions to help (all within ±2 points;
   C1, C3). Trust pool labels unchecked (three wrong labels cost 13 to 34 points in Run 1; in Run 3 the harm grew
-  with each correct example relabelled). Judge rare classes by accuracy.
+  with each correct example relabelled). A wrong label both removes correct evidence and adds evidence for a rival:
+  it costs most when it takes the last correct example, and more when several wrong labels point to one class
+  (C4). Judge rare classes by accuracy (use precision and recall at your operating point).
+- **Further cautions (E):** prompt wording, spotlighting and a separate claim field are not security boundaries,
+  and screen results need a magnitude floor. Vendor cost ($0.0008 to $0.13 per 1,000 decisions) will not decide.
 
 R1, the "within ±2" result, covers pre-defined benign wrappers only. Reworded decision rules, renamed options,
 natural answer-preserving context and adversarial suffixes do move Jev (cited in the paper); test them as content.
@@ -58,7 +74,8 @@ natural answer-preserving context and adversarial suffixes do move Jev (cited in
 |---|---|---|
 | No labels | Bare request; one-line definitions if option names are ids or jargon; shares only if live traffic matches, else post-hoc correction with re-estimated shares | `01`, `03`, `04` |
 | About 5 labels per class | Retrieved examples in the prompt | `02` |
-| About 100 labels per class | Compare the local combination (plain or tempered) with the prompt on your own held-out data | `05`, `11` |
+| About 100 labels per class | Compare the local combination (plain or tempered) with the prompt on your own held-out data, per-class recall included | `05`, `11` |
+| Pool older than live traffic, natural class mix | Score both approaches on recent held-out items; check tail-class recall before using the local combination | `11` (its split is random: hold out your most recent rows yourself) |
 | Vendor calls must be cut | Classifier-first cascade, threshold on recall or precision, cross-fitted | `06` |
 | Short, balanced intent sets, cost-bound | Labels-only shortlist (most items need no call) | `07` |
 | Several decisions about the same text | Pack them into one request, main question last | `08` |
@@ -127,7 +144,8 @@ construction, so its numbers are not evidence. Every mock run says so.
 
 All on Jev 1.13. **Confirmatory** = pre-registered, frozen by a hash before any call, Holm-corrected: Run 1 used
 held-out test items, Run 2 items never sent in any request, Run 3 fresh items of four further datasets (MASSIVE,
-LEDGAR, MetaTool, new CFPB rows), deposited publicly before its first call and clustered by gold class.
+LEDGAR, MetaTool, new CFPB rows), deposited publicly before its first call and clustered by gold class, Run 4 fresh
+items of MASSIVE, LEDGAR and MetaTool, frozen internally (not deposited) and clustered by gold class.
 **Secondary** = pre-specified estimates without a decision. **Exploratory** = development screens or analyses after
 unsealing. Differences in accuracy points, 90% intervals in brackets. A non-inferiority result is reported as "no
 more than X points below", never as equal.
@@ -168,18 +186,31 @@ more than X points below", never as equal.
 | Labels-only shortlist vs kNN-20 prompt (Banking77) | 91.4 vs 93.7; 62 vs 1,117 tokens; 80% of items without a call | Exploratory |
 | Naive screening rule on content-free edits | promoted or flagged 12 of 53 | Exploratory |
 | Jev 1.14 vs 1.13, four arms on CFPB and MetaTool | point estimates within 2.5 points; under class clusters retrieval and top-3 harm met the pre-registered direction on MetaTool, not CFPB; CFPB persona difference +1.0 [+0.1, +1.8] | Secondary, Run 3 |
-| **Run 4** (pre-registered, not yet run) | | |
-| 5 per class: one bare call × tuned classifier vs the kNN-20 prompt (fresh MASSIVE, LEDGAR, MetaTool) | Run 4 results: added on publication | Run 4 |
-| 100 per class: bare × vote × tuned classifier vs the prompt; tempered product (frozen exponents) | Run 4 results: added on publication | Run 4 |
-| Dose controls: deleting vs relabelling correct examples; one common rival vs distinct rivals | Run 4 results: added on publication | Run 4 |
-| SuperICL; CFPB time split with natural pools (accuracy, macro-F1, worst-class recall); pool redraws | Run 4 results: added on publication | Run 4 (secondary) |
+| **Run 4** (fresh MASSIVE, LEDGAR, MetaTool; class clusters; Holm over its 5 tests) | | |
+| Why wrong labels hurt: deleting k correct shown examples vs relabelling them to distinct rivals (mean over k = 1 to 3; 1,057 items) | +13.1 [+11.7, +14.7]: deletion costs less than relabelling | Confirmatory, Run 4 (X3a) |
+| Relabelling to one common rival vs to distinct rivals (mean over k = 2, 3) | −13.2 [−14.7, −11.7]: one rival costs more | Confirmatory, Run 4 (X3b) |
+| Deletion alone: loss at the third (last) correct example minus loss at the second | +10.1 [+7.5, +12.7]: the loss jumps at the last correct example (deletion steps −1.8, −3.8, −13.9; descriptive) | Confirmatory, Run 4 (X3c) |
+| All three correct examples changed: deleted / relabelled to distinct rivals / to one rival, vs the clean display | −19.4 / −47.0 / −67.2 | Descriptive, Run 4 |
+| 5 per class: one bare call × tuned classifier vs the kNN-20 prompt (5,606 items, 104 classes) | −0.6 [−1.7, +0.3]: not shown non-inferior at −1.5 (Holm p .16); below 0 on every dataset | Confirmatory, Run 4 (X1a; test not passed) |
+| 100 per class: bare × vote × tuned classifier (the G5 product) vs the prompt | −0.7 [−1.6, +0.1]: not shown non-inferior at −1.5 (Holm p .16); below 0 on every dataset | Confirmatory, Run 4 (X1b; test not passed) |
+| Same two tests with near-duplicate clusters instead of class clusters | X1a [−1.2, −0.1], X1b [−1.3, −0.2]: both intervals above −1.5 | Secondary, Run 4 (the pre-registered unit is the class) |
+| 100 per class: tempered product (exponents frozen before Run 4) vs the prompt | −0.4 [−1.2, +0.3] | Secondary, Run 4 |
+| 5 per class: prompt vs bare; vs tuned classifier; vs nearest centroid | +2.9 [+0.7, +4.9]; +9.1 [+7.3, +11.2]; +9.8 [+7.8, +12.1] | Secondary, Run 4 |
+| 5 per class: bare × nearest centroid vs the prompt | −0.5 [−1.9, +1.2]: the post hoc +2.1 did not recur on fresh items | Secondary, Run 4 |
+| SuperICL (the classifier's label and confidence stated in the request; MASSIVE, LEDGAR) vs the prompt | −2.3 [−4.1, −0.6] at 5 per class, −1.2 [−2.5, +0.0] at 100: below the prompt at both budgets; Jev returned the stated label on 86.5 to 97.2% of items, so it inherited the classifier's errors | Secondary, Run 4 |
+| Pool redraws, Run 2 items (6 draws): G5 product vs the prompt; 5-per-class prompt vs bare | −1.0 to +0.75 (above −1.5 in 6 of 6, above 0 in 3 of 6: sign not stable); +2.0 to +5.3 (sign stable in 6 of 6) | Secondary, Run 4 |
+| CFPB time split (2025 pool at natural shares, 2,000 complaints from 2026): prompt vs bare; local product vs prompt | +0.05 [−0.6, +0.8]: no gain from retrieval; −10.9 [−12.2, −9.5], payday-loan recall 17.3% vs 71.6% (7 pool examples) | Secondary, Run 4 |
+| Fitted prior × evidence model applied to the X3 arms without refitting | predicted the sign of every contrast (9 of 9 cells) and the deletion jump, but only about half of the two rival effects | Exploratory |
 
 Caveats from the paper: the label-budget results (R3) rest on item-level clusters; under gold-class clustering no
-Run 2 decision passes Holm, and Run 3's label-budget estimates were inconclusive. G5's two datasets were chosen after
-exploratory analysis, and its interval conditions on one pool draw, while pool draws moved development accuracy by
-up to 2.5 points, more than the 1.5-point margin. Pools were class-balanced; the tasks are mostly English single-label
-choices; one vendor, with one small check of a second version. All three pre-registrations were written and run by
-one author; Runs 1 and 2 were frozen but not deposited, Run 3 was deposited before its first call.
+Run 2 decision passes Holm, Run 3's label-budget estimates were inconclusive, and Run 4 did not show the local
+combination non-inferior at 5 or 100 labels per class on three further datasets. G5's two datasets were chosen after
+exploratory analysis, and its interval conditions on one pool draw: across six pool draws of its items the
+difference stayed above −1.5 but changed sign, so read Run 2's +1.4 as conditional on one draw. Pools were
+class-balanced except in the one time split (CFPB, a single dataset with a shifted class mix); the tasks are mostly
+English single-label choices; one vendor, with one small check of a second version. All four pre-registrations were
+written and run by one author; Runs 1, 2 and 4 were frozen but not deposited, Run 3 was deposited before its first
+call. One Holm correction over all 29 tests (a sensitivity check) would no longer reject T8 and H3.
 
 ## Cost and privacy
 
