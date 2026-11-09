@@ -1,0 +1,32 @@
+"""10: what NOT to do. Phrasing adds no information, so it does nothing; wrong labels remove information, so
+they hurt.
+
+In the paper (confirmatory): persona, ALL-CAPS emphasis and politeness each stayed within +-2 accuracy points of
+the bare request, and wrong labels on the three nearest shown examples cost 13 to 34 points.
+"""
+from _common import backend_from_args, show
+
+from decision_levers import LabelledPool, select_examples, toy, with_examples
+from decision_levers.evaluate import compare
+from decision_levers.levers import add_emphasis, add_persona, add_politeness, relabel_top
+
+be = backend_from_args(__doc__)
+test = toy.load("test") + toy.load("calib")
+gold = [t.label for t in test]
+pool = LabelledPool.from_pairs((t.text, t.label) for t in toy.load("train"))
+
+bare = lambda t: be.decide(toy.bare_request(t.text))                       # noqa: E731
+print("phrasing (equivalence margin +-2 points; on 32 toy items the flag is an illustration, not a test):")
+for name, edit in [("persona", add_persona), ("emphasis", add_emphasis), ("politeness", add_politeness)]:
+    r = compare(bare, lambda t, e=edit: be.decide(e(toy.bare_request(t.text))), test, gold, margin=0.02)
+    print(f"  {name:<11} accuracy change {100 * r['estimate']:+5.1f} points [{100 * r['lo']:+.1f}, {100 * r['hi']:+.1f}]"
+          f", flips {r['flip']:.0%}, equivalent: {r['equivalent']}")
+
+print("wrong labels on the 3 nearest shown examples:")
+clean, wrong = [], []
+for t in test:
+    shown = select_examples(t.text, pool, k=20, n_options=len(toy.OPTIONS))
+    clean.append(with_examples(toy.bare_request(t.text), shown))
+    wrong.append(with_examples(toy.bare_request(t.text), relabel_top(shown, toy.OPTIONS, n=3, seed=t.text)))
+show("clean examples", be.decide_many(clean), gold)
+show("top-3 labels wrong", be.decide_many(wrong), gold)

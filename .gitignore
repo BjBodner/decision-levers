@@ -1,0 +1,22 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# environments
+.venv/
+venv/
+
+# caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.cache/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# build
+build/
+dist/
+*.egg-info/

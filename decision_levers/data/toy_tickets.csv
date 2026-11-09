@@ -1,0 +1,73 @@
+text,label,split
+I was charged twice for my subscription this month,Billing,train
+My invoice shows a plan I never signed up for,Billing,train
+Why did the price on my monthly statement go up?,Billing,train
+The card on file was declined but you still took a payment,Billing,train
+Can I get a copy of last year's invoices for my accountant?,Billing,train
+There is an extra fee on my bill that nobody explained,Billing,train
+Please update the credit card used for my payments,Billing,train
+I want to switch from monthly to annual billing,Billing,train
+The tax on my invoice is calculated wrong,Billing,train
+You charged my old card after I changed it,Billing,train
+My statement lists two charges for the same day,Billing,train
+How do I download a receipt for my last payment?,Billing,train
+I can't log in even though my password is correct,Account access,train
+The password reset email never arrives,Account access,train
+My account is locked after too many sign-in attempts,Account access,train
+Two-factor codes from the app are always rejected,Account access,train
+I lost my phone and now I can't get the verification code,Account access,train
+How do I change the email address I use to sign in?,Account access,train
+The login page keeps sending me back to the start,Account access,train
+Someone else may have accessed my account,Account access,train
+I forgot the username for my account,Account access,train
+My parcel has not arrived and tracking stopped updating,Shipping,train
+The courier left the box at the wrong address,Shipping,train
+How long does delivery to Canada usually take?,Shipping,train
+Tracking says delivered but there is no package,Shipping,train
+Can I change the delivery address for an order already shipped?,Shipping,train
+The package arrived crushed and the item is damaged,Shipping,train
+Do you ship to PO boxes?,Shipping,train
+My order has been stuck in transit for two weeks,Shipping,train
+Express shipping took longer than standard,Shipping,train
+I returned the jacket two weeks ago and still have no refund,Refund,train
+I want my money back for the order I cancelled,Refund,train
+How long does it take for a refund to reach my card?,Refund,train
+The refund amount is less than what I paid,Refund,train
+You approved my return but the money never came back,Refund,train
+Can I get a refund instead of store credit?,Refund,train
+The app crashes every time I open the settings screen,Bug report,train
+Clicking export does nothing and shows an error in the console,Bug report,train
+The search results page is blank on mobile,Bug report,train
+After the update the dashboard numbers no longer load,Bug report,train
+I was billed twice for one order this week,Billing,calib
+The amount on my bill does not match the price on your website,Billing,calib
+Please send me an invoice with my company name on it,Billing,calib
+My payment failed but the charge still appears on my card,Billing,calib
+I keep getting an invalid password error when I sign in,Account access,calib
+The verification code never shows up on my phone,Account access,calib
+I can't access my account after changing my email,Account access,calib
+My login session expires every few minutes,Account access,calib
+The delivery is three days late and the tracking number is invalid,Shipping,calib
+The parcel was delivered to my neighbour by mistake,Shipping,calib
+Which courier do you use for international orders?,Shipping,calib
+I sent the shoes back and I am still waiting for my money,Refund,calib
+Please refund the duplicate order I placed by accident,Refund,calib
+My refund was sent to a card I no longer have,Refund,calib
+The page freezes when I try to upload a photo,Bug report,calib
+Buttons overlap and I can't tap submit on my tablet,Bug report,calib
+There is a charge on my statement I don't recognise,Billing,test
+Why was I billed after I cancelled my plan?,Billing,test
+I need to change the card you charge each month,Billing,test
+Can you explain the late payment fee on my invoice?,Billing,test
+I can't sign in because the reset link has expired,Account access,test
+My account was locked and I need access today,Account access,test
+The authentication code is not accepted when I log in,Account access,test
+I don't remember which email my account uses,Account access,test
+My order shows shipped but nothing has arrived after ten days,Shipping,test
+The box was left outside in the rain and the delivery was damaged,Shipping,test
+Can you send my parcel to a different address?,Shipping,test
+Tracking has not moved since the package left the warehouse,Shipping,test
+I cancelled before shipping so please give my money back,Refund,test
+The return was received but the refund is still pending,Refund,test
+The app shows an error and closes when I tap checkout,Bug report,test
+Charts on the reports page never finish loading,Bug report,test
