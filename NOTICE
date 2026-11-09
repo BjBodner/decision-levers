@@ -4,3 +4,12 @@ Copyright 2026 Benjamin Jacob Bodner
 Independent project. Not affiliated with, funded by, or endorsed by TypeSafe. 'Jev' and 'TypeSafe' are used only to name the API this code calls.
 
 Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Third-party data
+----------------
+examples/real_payloads/flagship_banking77.json contains texts from Banking77 (Casanueva et al. 2020, PolyAI),
+licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). The texts are unmodified; they are shown
+inside the request bodies sent to TypeSafe's Jev 1.13, together with the recorded answers.
+
+decision_levers/data/toy_tickets.csv and examples/data/hr_requests.csv were written for this package and are
+covered by its Apache-2.0 licence.

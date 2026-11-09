@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "decision-levers"
-version = "0.1.0"
+version = "0.2.0"
 description = "Information, not instructions: tested prompting levers for typed decision models (TypeSafe Jev API). Independent project, not affiliated with TypeSafe."
 readme = "README.md"
 license = "Apache-2.0"
@@ -17,7 +17,7 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
-dependencies = ["numpy>=1.23", "scikit-learn>=1.2", "httpx>=0.24"]
+dependencies = ["numpy>=1.23", "scipy>=1.8", "scikit-learn>=1.2", "httpx>=0.24"]
 
 [project.optional-dependencies]
 dense = ["fastembed>=0.3"]

@@ -122,8 +122,8 @@ def mean_probs(answers: Sequence[Mapping[str, float]], floor: float = 1e-4) -> d
 
 def pack_questions(main: Request, others: Mapping[str, Request], main_last: bool = True,
                    main_name: str = "q") -> PackedRequest:
-    """Several questions about ONE state in one request; each answer stayed equivalent to asking it alone and
-    packing saved about half the input tokens. The paper's rule puts the main question LAST."""
+    """Several questions about ONE state in one request; with seven unrelated questions the main answer stayed
+    within +-2 points of asking it alone (confirmatory), and packing related ones saved about half the input tokens. The paper's rule puts the main question LAST."""
     qs = [(n, r) for n, r in others.items()]
     order = qs + [(main_name, main)] if main_last else [(main_name, main)] + qs
     return PackedRequest(main.state, dict(order))

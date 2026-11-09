@@ -1,15 +1,23 @@
 """Local models and the "one bare call, combined locally" approach.
 
 ``combine(bare, vote, lr)`` multiplies the bare model's answer (its prior knowledge) by local evidence from the
-labelled pool. In the paper this product was non-inferior to the retrieval prompt at 100 labels per class on
-topical text, while sending no pool text to the vendor. It trailed on short-intent and moderation sets.
+labelled pool. In the paper this plain product was no more than 1.5 points below the retrieval prompt at 100 labels
+per class on tweets and complaints (non-inferior, Run 2, item-level clusters); on four further datasets (Run 3) the
+estimate was inconclusive, and on Banking77, CLINC150 and ToxicChat it trailed by 0.8 to 1.5 points (exploratory).
+It sends only the item to the vendor, no pool text. On CFPB its recall on the smallest class trailed the prompt's by
+about 10 to 16 points (exploratory): check per-class recall on your own data.
+
+``tempered_combine`` / ``combine(..., weights=...)`` raise each input to an exponent; ``fit_exponents`` fits them by
+cross-validation on your own held-out labelled items.
 """
 from __future__ import annotations
 
+import random
 from typing import Mapping, Sequence
 
 import numpy as np
 
+from .cascade import _folds
 from .retrieval import LabelledPool, Retriever, as_retriever
 
 Probs = dict[str, float]
@@ -108,12 +116,121 @@ class TunedLR:
         return [dict(zip(self.options, row.tolist())) for row in out]
 
 
-def combine(bare: Mapping[str, float], *experts: Mapping[str, float], eps: float = 1e-3) -> Probs:
+# The paper's frozen exponents for the tempered product at about 100 labels per class: alpha (bare), beta (vote),
+# gamma (tuned LR). Each is the median of 60 cross-fitted fits (12 dataset rows x 5 cluster folds, gold log-loss on
+# Jev 1.13 answers, the dense prior-corrected vote and LR); frozen for the paper's fourth run. Rounded: 0.358 /
+# 0.131 / 0.620. Exploratory: there is no frozen set at 5 per class, and they were fitted with the paper's dense
+# features, so refit them on your own held-out data (``fit_exponents``) before relying on them.
+PAPER_EXPONENTS = (0.3579, 0.1310, 0.6201)
+
+
+def combine(bare: Mapping[str, float], *experts: Mapping[str, float], eps: float = 1e-3,
+            weights: Sequence[float] | str | None = None) -> Probs:
     """Product of experts: ``(bare + eps) * (expert_1 + eps) * ...``, renormalised over the bare answer's options.
-    ``combine(bare, vote, lr)`` is the paper's "bare x vote x tuned LR" (one bare call, no example text sent)."""
-    out = {o: float(p) + eps for o, p in bare.items()}
-    for ex in experts:
-        for o in out:
-            out[o] *= float(ex.get(o, 0.0)) + eps
-    z = sum(out.values())
-    return {o: v / z for o, v in out.items()}
+    ``combine(bare, vote, lr)`` is the paper's "bare x vote x tuned LR" (one bare call, no example text sent), the
+    plain product that was non-inferior to the prompt in Run 2 (G5).
+
+    ``weights=(a, b, c, ...)``, one per input (bare first), gives the TEMPERED product
+    ``(bare + eps)^a * (expert_1 + eps)^b * ...``, renormalised; ``weights="paper"`` uses ``PAPER_EXPONENTS`` and
+    needs exactly two experts (vote, LR). ``None`` (default) is the plain product, i.e. all weights 1."""
+    if isinstance(weights, str):
+        if weights != "paper":
+            raise ValueError("weights must be a sequence of numbers, 'paper' or None")
+        if len(experts) != 2:
+            raise ValueError("weights='paper' is (bare, vote, LR): pass exactly two experts")
+        weights = PAPER_EXPONENTS
+    w = [1.0] * (1 + len(experts)) if weights is None else [float(x) for x in weights]
+    if len(w) != 1 + len(experts):
+        raise ValueError(f"need {1 + len(experts)} weights (bare first), got {len(w)}")
+    if any(x < 0 or not np.isfinite(x) for x in w):
+        raise ValueError("weights must be finite and >= 0")
+    opts = list(bare)
+    with np.errstate(divide="ignore"):
+        z = np.array([w[0] * np.log(float(bare[o]) + eps) for o in opts])
+        for wi, ex in zip(w[1:], experts):
+            z += np.array([wi * np.log(float(ex.get(o, 0.0)) + eps) for o in opts])
+    e = np.exp(z - z.max())
+    e /= e.sum()
+    return {o: float(v) for o, v in zip(opts, e)}
+
+
+def tempered_combine(bare: Mapping[str, float], vote: Mapping[str, float], lr: Mapping[str, float],
+                     weights: Sequence[float] = PAPER_EXPONENTS, eps: float = 1e-3) -> Probs:
+    """``bare^a * vote^b * LR^c`` (each + ``eps``), renormalised; defaults to the paper's frozen exponents
+    (``PAPER_EXPONENTS``, about 100 labels per class). Exploratory: in the paper's cross-fitted analysis it closed
+    the gap to the prompt on Banking77 (+0.2) and Run 2 ToxicChat (-0.4) but not on CLINC150 (-0.9)."""
+    return combine(bare, vote, lr, eps=eps, weights=weights)
+
+
+# ------------------------------------------------------------------------------------------ fitting exponents
+
+def _log_stack(bare: Sequence[Mapping[str, float]], experts: Sequence[Sequence[Mapping[str, float]]],
+               options: list[str], eps: float) -> np.ndarray:
+    """(n_inputs, n_items, n_options) array of log(p + eps)."""
+    cols = [bare, *experts]
+    return np.stack([np.log(np.array([[float(p.get(o, 0.0)) for o in options] for p in col]) + eps)
+                     for col in cols])
+
+
+def _fit_w(L: np.ndarray, y: np.ndarray, w0: np.ndarray) -> np.ndarray:
+    """Non-negative exponents minimising the mean gold log-loss of softmax(sum_j w_j L_j)."""
+    from scipy.optimize import minimize
+
+    rows = np.arange(len(y))
+
+    def f(w):
+        z = np.tensordot(w, L, axes=1)
+        z = z - z.max(1, keepdims=True)
+        lse = np.log(np.exp(z).sum(1))
+        p = np.exp(z - lse[:, None])
+        nll = float(-(z[rows, y] - lse).mean())
+        grad = -np.array([(Lj[rows, y] - (p * Lj).sum(1)).mean() for Lj in L])
+        return nll, grad
+
+    res = minimize(f, w0, jac=True, method="L-BFGS-B", bounds=[(0.0, None)] * len(w0))
+    return np.asarray(res.x, dtype=float)
+
+
+def _scores(L: np.ndarray, w: np.ndarray, y: np.ndarray) -> dict:
+    z = np.tensordot(w, L, axes=1)
+    z = z - z.max(1, keepdims=True)
+    lp = z - np.log(np.exp(z).sum(1, keepdims=True))
+    return {"accuracy": float((lp.argmax(1) == y).mean()), "log_loss": float(-lp[np.arange(len(y)), y].mean())}
+
+
+def fit_exponents(bare: Sequence[Mapping[str, float]], experts: Sequence[Sequence[Mapping[str, float]]],
+                  gold: Sequence[str], cv: int = 5, groups: Sequence | None = None, seed: int = 0,
+                  eps: float = 1e-3) -> dict:
+    """Fit tempered-product exponents on YOUR held-out labelled items, by cross-validation.
+
+    ``bare[i]`` is the bare answer for item i; ``experts`` is one list per local model (e.g. ``[votes, lrs]``),
+    aligned with ``bare``. The local models must not have been trained on these items. Exponents >= 0 are fitted by
+    gold log-loss (the paper's A2 method): on k-1 folds, applied to the k-th (whole ``groups`` per fold), then once
+    on all items. Returns ``{"weights", "fold_weights", "crossfit", "plain", "n"}``: deploy ``weights``; compare
+    ``crossfit`` (out-of-fold accuracy and log-loss of the tempered product) with ``plain`` (all weights 1, same
+    items) before switching. This is a supervised stacker on your labels; it is not evidence about the model."""
+    options = list(bare[0]) if bare else []
+    if any(list(p) != options for p in bare):
+        raise ValueError("every bare answer must have the same options in the same order")
+    missing = sorted({g for g in gold if g not in options})
+    if missing:
+        raise ValueError(f"gold labels not among the options: {missing[:5]}")
+    if any(len(col) != len(bare) for col in experts) or len(gold) != len(bare):
+        raise ValueError("bare, each expert list and gold must have one entry per item")
+    L = _log_stack(bare, experts, options, eps)
+    y = np.array([options.index(g) for g in gold])
+    w0 = np.ones(L.shape[0])
+    folds = _folds(len(y), int(cv), groups, random.Random(f"exponents-cv/{seed}"))
+    if len(folds) < 2:
+        raise ValueError("cross-validation needs at least 2 non-empty folds")
+    fold_w, oof = [], np.zeros(L.shape[1:])
+    for te in folds:
+        tr = np.setdiff1d(np.arange(len(y)), te)
+        w = _fit_w(L[:, tr], y[tr], w0)
+        fold_w.append(w.tolist())
+        z = np.tensordot(w, L[:, te], axes=1)
+        oof[te] = z - z.max(1, keepdims=True)
+    lp = oof - np.log(np.exp(oof).sum(1, keepdims=True))
+    crossfit = {"accuracy": float((lp.argmax(1) == y).mean()), "log_loss": float(-lp[np.arange(len(y)), y].mean())}
+    return {"weights": tuple(_fit_w(L, y, w0).tolist()), "fold_weights": fold_w, "crossfit": crossfit,
+            "plain": _scores(L, w0, y), "n": len(y), "options": options}

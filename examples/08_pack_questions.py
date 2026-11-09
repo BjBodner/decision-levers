@@ -2,7 +2,7 @@
 
 In the paper three related questions about one complaint, packed, matched three separate calls (argmax agreement
 96-100%, exploratory) and saved 51% of input tokens; seven unrelated companion questions left the main answer
-equivalent within +-2 points (confirmatory). Put the main question last.
+within +-2 points (equivalence, confirmatory). Put the main question last.
 """
 from _common import backend_from_args, tokens_per_call
 

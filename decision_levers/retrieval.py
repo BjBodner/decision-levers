@@ -38,6 +38,14 @@ class LabelledPool:
                 texts.append(str(text))
         return cls(labels, texts)
 
+    @classmethod
+    def from_csv(cls, path, text_col: str = "text", label_col: str = "label", per_class: int | None = None,
+                 **kwargs) -> "LabelledPool":
+        """From a CSV file with a header row (see ``decision_levers.data.load_csv`` for ``where=``, ``delimiter=``
+        and the other options). Build the pool from training rows only, never from the items you test on."""
+        from .data import load_csv
+        return cls.from_pairs(load_csv(path, text_col, label_col, **kwargs), per_class=per_class)
+
     def __len__(self) -> int:
         return len(self.texts)
 

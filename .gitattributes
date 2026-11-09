@@ -1,0 +1,2 @@
+# Recorded payloads are kept byte for byte (their SHA-256 is quoted in examples/real_payloads/README.md)
+examples/real_payloads/*.json -text

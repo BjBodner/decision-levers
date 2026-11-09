@@ -85,6 +85,25 @@ def hit(p: Probs, gold: str) -> float:
     return float(max(p, key=p.get) == gold)
 
 
+def class_metrics(answers: Sequence[Probs], gold: Sequence[str], min_items: int = 1) -> dict:
+    """Accuracy, macro-F1 (over the gold classes present), per-class recall and the worst-class recall (over classes
+    with at least ``min_items`` gold items; the paper used 10). Accuracy alone hid the costs the paper found on
+    small classes: on CFPB the local combination's smallest-class recall trailed the prompt's by 10 to 16 points."""
+    pred = [max(p, key=p.get) for p in answers]
+    classes = sorted(set(gold))
+    recall, f1 = {}, []
+    for c in classes:
+        tp = sum(p == c and g == c for p, g in zip(pred, gold))
+        n_gold, n_pred = sum(g == c for g in gold), sum(p == c for p in pred)
+        recall[c] = tp / n_gold
+        f1.append(0.0 if tp == 0 else 2 * tp / (n_gold + n_pred))
+    eligible = {c: r for c, r in recall.items() if sum(g == c for g in gold) >= min_items}
+    worst = min(eligible, key=eligible.get) if eligible else None
+    return {"accuracy": float(np.mean([p == g for p, g in zip(pred, gold)])) if gold else 0.0,
+            "macro_f1": float(np.mean(f1)) if f1 else 0.0, "recall": recall,
+            "worst_class": worst, "worst_class_recall": eligible.get(worst, float("nan")) if worst else float("nan")}
+
+
 def gold_logp(p: Probs, gold: str, clip: float = LOGP_CLIP) -> float:
     return math.log(max(float(p.get(gold, 0.0)), clip))
 

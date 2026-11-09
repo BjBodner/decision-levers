@@ -109,27 +109,57 @@ Input:   bare answer p (Algorithm 1), vote v (Algorithm 6), classifier f(x) (Alg
 Output:  e over O
 1. e(o) <- (p(o) + eps) * (v(o) + eps) * (f(x)(o) + eps)
 2. e <- e / sum(e)
-Note: no pool text is sent to the vendor.
+Note: no pool text is sent to the vendor; the bare call sends the item.
+Tempered variant (exploratory): e(o) <- (p(o) + eps)^a * (v(o) + eps)^b * (f(x)(o) + eps)^c, renormalised;
+   the paper's frozen exponents at about 100 labels per class are (a, b, c) = (0.358, 0.131, 0.620).
 ```
-`combine(bare, vote, lr)`.
+`combine(bare, vote, lr)`; tempered: `tempered_combine(bare, vote, lr)` or `combine(..., weights=(a, b, c))`.
+
+### Algorithm 8b. Fitting the exponents on your own held-out data
+
+```
+Input:   held-out labelled items i with gold y_i and bare p_i, vote v_i, classifier f_i
+         (the vote and classifier must not have been trained on these items); folds K (default 5)
+Output:  exponents w = (a, b, c) >= 0, and a cross-fitted estimate
+1. L_j(i, o) <- log(input_j(i)(o) + eps)                    for each input j in (bare, vote, classifier)
+2. split the items into K folds (whole near-duplicate groups per fold)
+3. for each fold k: w_k <- argmin over w >= 0 of the mean gold log-loss of softmax(sum_j w_j L_j) on the other
+   folds; score fold k with w_k                              (out-of-fold predictions)
+4. w <- the same fit on all items                            (the exponents to deploy)
+5. compare the out-of-fold log-loss and accuracy with the plain product (w = 1, 1, 1) on the same items;
+   keep the plain product unless tempering wins out of fold
+```
+`fit_exponents(bare, [votes, lrs], gold, cv=5, groups=...)`.
 
 ### Algorithm 9. Classifier-first cascade
 
 ```
 Input:   held-out items with gold y_i, local answers l_i, model answers m_i (e.g. Algorithm 2);
-         target: max accuracy loss delta (default 0.005), OR min recall rho for a positive class
+         target: max accuracy loss delta (default 0.005), OR, for a positive class,
+                 min recall rho and/or min precision pi
 Output:  threshold t
 1. conf_i <- max_o l_i(o)
 2. grid <- the 201 quantiles of conf, plus -1 and 1 + 1e-9
 3. full <- accuracy of m on the held-out items
 4. for t in grid:
        local_i <- conf_i > t;   pred_i <- argmax l_i if local_i else argmax m_i
-       feasible if  accuracy(pred) >= full - delta      (accuracy target)
-                or  recall_positive(pred) >= rho         (recall target)
+       feasible if  accuracy(pred) >= full - delta                        (accuracy target)
+                or  recall_pos(pred) >= rho  and  precision_pos(pred) >= pi  (rare-class target; either floor
+                                                                              may be omitted; no positive
+                                                                              prediction -> precision 0)
 5. t <- the feasible threshold with the smallest share sent (ties: higher accuracy); none feasible -> send all
+Cross-fitted estimate (cv = K):
+6. split the items into K folds (whole near-duplicate groups per fold; repeat over R random partitions)
+7. for each fold k: t_k <- steps 1-5 on the other folds; route fold k with t_k
+8. report accuracy, share sent, recall and precision of the pooled out-of-fold predictions (mean over R)
+   steps 1-5 on all items are optimistic by construction: quote the cross-fitted numbers
 Deploy: answer locally iff conf > t, else call the model.  Freeze t before testing.
+Note: with m = the kNN-20 prompt (Algorithm 2), every forwarded item is sent with its nearest pool texts.
 ```
-`ClassifierFirstCascade().fit(local, model, gold, max_acc_loss=...)` or `fit(..., min_recall=..., positive=...)`.
+`ClassifierFirstCascade().fit(local, model, gold, max_acc_loss=...)`, or
+`fit(..., min_recall=..., min_precision=..., positive=...)`; add `cv=5, groups=...` for the cross-fitted report
+(`report["crossfit"]`). The paper's primary cross-fitted numbers used 200 random two-fold partitions
+(`cv=2, repeats=200`).
 
 ### Algorithm 10. Labels-only shortlist
 

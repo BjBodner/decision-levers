@@ -1,8 +1,11 @@
-"""10: what NOT to do. Phrasing adds no information, so it does nothing; wrong labels remove information, so
-they hurt.
+"""10: what NOT to do. Benign wrappers add no information, so they stayed within +-2 points; wrong labels remove
+information, so they hurt.
 
 In the paper (confirmatory): persona, ALL-CAPS emphasis and politeness each stayed within +-2 accuracy points of
-the bare request, and wrong labels on the three nearest shown examples cost 13 to 34 points.
+the bare request (Run 1; and five personas and five politeness prefixes on four more datasets, Run 3), and wrong
+labels on the three nearest shown examples cost 13 to 34 points (Run 1). Relabelling one, two and three of three
+correct shown examples cost 2.9, 11.4 and 38.2 points (Run 3; slope confirmed, cumulative values descriptive).
+This covers pre-defined benign wrappers only: reworded rules and decision-relevant context do move the model.
 """
 from _common import backend_from_args, show
 

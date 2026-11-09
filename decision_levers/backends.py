@@ -72,6 +72,13 @@ class _BaseBackend:
     def decide_packed(self, packed: PackedRequest, rep: int = 0) -> dict[str, Probs]:
         return self._answers(packed.to_wire(self.model), rep)
 
+    def decide_wire(self, wire: dict, rep: int = 0) -> dict[str, Probs]:
+        """Send a raw wire body as is (e.g. a recorded payload); answers by question name. The body's ``model``
+        must be this backend's pinned model."""
+        if wire.get("model") != self.model:
+            raise BackendError(f"body is for model {wire.get('model')!r}, this backend is pinned to {self.model!r}")
+        return self._answers(wire, rep)
+
 
 class JevBackend(_BaseBackend):
     """TypeSafe Jev over HTTPS with Bearer auth, retry with backoff, and an on-disk response cache.
@@ -150,7 +157,36 @@ class JevBackend(_BaseBackend):
         return self.client.get(MODELS_URL, headers=self._headers()).status_code == 200
 
 
-# ---------------------------------------------------------------------------------------------- offline fake
+# ---------------------------------------------------------------------------------------------- offline fakes
+
+class ReplayBackend(_BaseBackend):
+    """Answers byte-identical wire bodies from recorded responses, offline; any other body raises.
+
+    ``records`` is a sequence of ``(wire_body, answers)`` where ``answers`` maps a question name to its recorded
+    probabilities (or, for a single-question body, the probabilities themselves). Use it to replay published
+    payloads (``examples/real_payloads/``) or to pin a test to real answers without calling the API.
+    """
+
+    def __init__(self, records: Iterable[tuple[dict, Mapping]], model: str | None = None):
+        super().__init__()
+        self._store: dict[str, dict[str, Probs]] = {}
+        for wire, answers in records:
+            if not answers or not all(isinstance(v, Mapping) for v in answers.values()):
+                answers = {next(iter(wire["questions"])): answers}
+            self._store[request_key(wire["model"], wire)] = {q: {o: float(p) for o, p in a.items()}
+                                                              for q, a in answers.items()}
+            model = model or wire["model"]
+        self.model = model or "replay"
+
+    def _answers(self, wire: dict, rep: int) -> dict[str, Probs]:
+        key = request_key(wire.get("model", self.model), wire)
+        if key not in self._store:
+            raise BackendError("replay: this body does not match any recorded request byte for byte")
+        with self._lock:
+            self.stats["calls"] += 1
+            self.stats["input_tokens"] += estimate_tokens(wire)
+        return {q: dict(a) for q, a in self._store[key].items()}
+
 
 _STOP = set("the a an and or of to for in on at by with from as is are be was were it its this that my me i you your "
             "we our they them can could would should will not no yes do does did have has had what which who how "

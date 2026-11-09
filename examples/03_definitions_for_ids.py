@@ -1,7 +1,9 @@
 """03: one-line definitions, which rescue cryptic option ids.
 
 DO this when option names are ids or jargon. In the paper (confirmatory) cryptic tool ids alone scored 2.3%; with
-definitions 84.4%, non-inferior to readable names with definitions. Definitions on readable names added +5.8.
+definitions 84.4%, no more than 2 points below readable names with definitions (non-inferior). Definitions written
+blind on three further datasets were no more than 2 points below names on average, but LEDGAR was 2.4 below (Run 3).
+Definitions on readable names added +5.8.
 """
 from _common import backend_from_args, show
 

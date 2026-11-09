@@ -9,8 +9,8 @@ EX = Path(__file__).resolve().parents[1] / "examples"
 SCRIPTS = sorted(p for p in EX.glob("[0-9][0-9]_*.py"))
 
 
-def test_there_are_ten_examples():
-    assert len(SCRIPTS) == 10
+def test_there_are_twelve_examples():
+    assert len(SCRIPTS) == 12
 
 
 @pytest.mark.parametrize("script", SCRIPTS, ids=lambda p: p.stem)

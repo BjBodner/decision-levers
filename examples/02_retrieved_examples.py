@@ -1,8 +1,10 @@
 """02: retrieved labelled neighbours in the option descriptions (the paper's kNN-20 prompt).
 
-DO this when you have few labels (about 5 per class): in the paper it beat bare Jev by 2 to 4 points and every
-local classifier by about 16. At 100 per class it beat bare by 5.9 to 11.2 points (confirmatory), but see
-example 05 for a cheaper way at that budget. Note that this sends pool texts to the vendor.
+DO this when you have few labels (about 5 per class): in the paper it beat bare Jev by 2.1 to 3.6 points and a tuned
+classifier by 16 to 17 (Run 2, confirmatory, item-level); on four further datasets +2.1 [+0.0, +4.1] over bare and
++10.8 over a tuned classifier (Run 3, secondary). At 80 to 100 per class it beat bare by 5.9 to 11.2 points
+(confirmatory); at that budget compare it with the local combination of example 05 on your own data. Note that
+this sends pool texts to the vendor.
 """
 from _common import backend_from_args, show, tokens_per_call
 

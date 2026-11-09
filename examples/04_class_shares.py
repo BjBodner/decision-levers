@@ -1,8 +1,9 @@
 """04: class shares, stated in the request or (better) applied after the call.
 
 In the paper: true shares beat no shares by +1.9 points (confirmatory) and beat shuffled shares by +6.2 to +6.8
-(confirmatory; most of that is the cost of wrong shares). Correcting the bare answer after the call was at least
-as good as stating the shares and added no tokens (exploratory). Both trade minority-class recall for accuracy.
+(confirmatory; most of that is the cost of wrong shares). Correcting the bare answer after the call beat stating
+the shares by 1.3 and 2.0 points and added no tokens (exploratory). Use shares only if live traffic matches them:
+both routes trade minority-class recall for accuracy and lost 5 to 8 points under a shifted class mix (exploratory).
 """
 from _common import backend_from_args, show, tokens_per_call
 
