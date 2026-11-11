@@ -110,7 +110,7 @@ Output:  e over O
 1. e(o) <- (p(o) + eps) * (v(o) + eps) * (f(x)(o) + eps)
 2. e <- e / sum(e)
 Note: no pool text is sent to the vendor; the bare call sends the item.
-Tempered variant (exploratory): e(o) <- (p(o) + eps)^a * (v(o) + eps)^b * (f(x)(o) + eps)^c, renormalised;
+Tempered variant (observed): e(o) <- (p(o) + eps)^a * (v(o) + eps)^b * (f(x)(o) + eps)^c, renormalised;
    the paper's frozen exponents at about 100 labels per class are (a, b, c) = (0.358, 0.131, 0.620).
 ```
 `combine(bare, vote, lr)`; tempered: `tempered_combine(bare, vote, lr)` or `combine(..., weights=(a, b, c))`.
@@ -211,7 +211,9 @@ Output:  estimate, interval, p-values
 3. p_sup = (1 + #{mean_b <= 0}) / (B + 1);  p_harm = (1 + #{mean_b >= 0}) / (B + 1)
    p_noninf = (1 + #{mean_b <= -margin}) / (B + 1)
    p_tost = max of the two one-sided p-values against -margin and +margin
-Clusters: near-duplicate groups; the gold class when there are 50 or more options.
+Clusters: near-duplicate groups (the paper's Runs 1 and 2) or gold classes (its Runs 3 to 8). With few
+classes the class bootstrap is too liberal: with 8 to 25 classes it rejected 8.5 to 8.8% at a nominal 5%.
+The paper re-checked those decisions with a wild-cluster bootstrap (Webb weights), not implemented here.
 ```
 `bootstrap_means`, `paired_bootstrap`, `tost`, `p_value`.
 

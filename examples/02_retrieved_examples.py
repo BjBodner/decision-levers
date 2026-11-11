@@ -1,10 +1,10 @@
 """02: retrieved labelled neighbours in the option descriptions (the paper's kNN-20 prompt).
 
-DO this when you have few labels (about 5 per class): in the paper it beat bare Jev by 2.1 to 3.6 points and a tuned
-classifier by 16 to 17 (Run 2, confirmatory, item-level); on four further datasets +2.1 [+0.0, +4.1] over bare and
-+10.8 over a tuned classifier (Run 3, secondary). At 80 to 100 per class it beat bare by 5.9 to 11.2 points
-(confirmatory); at that budget compare it with the local combination of example 05 on your own data. Note that
-this sends pool texts to the vendor.
+Do 1 and Do 4. At about 5 labels per class, on fresh items with the pool redrawn, it beat the bare call by 3.1
+points [+1.8, +4.6] (Run 8, confirmed). At 80 to 100 per class it beat the bare call by 5.9 to 11.2 points (Run 1)
+and by 7.7 on fresh items (Run 8), and the local combination of example 05 was not shown to match it: prefer it
+unless privacy rules it out. It sends pool texts to the vendor. Gains differ by model (one model lost 14.5 points
+on fresh items, and two were misled on long texts), so confirm on yours.
 """
 from _common import backend_from_args, show, tokens_per_call
 

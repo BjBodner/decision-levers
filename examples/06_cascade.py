@@ -2,8 +2,8 @@
 
 The threshold is fitted on HELD-OUT items (here the 'calib' split), then frozen and applied to 'test'. In the paper
 a threshold frozen in advance sent 8.2% of moderation items to the model and was no more than 1.5 points below the
-prompt on accuracy (confirmatory, accuracy only), but it cost 7.3 points of precision on the rare toxic class
-(exploratory): pick a recall or precision target for rare positives, as shown at the end.
+prompt on accuracy (confirmed for these two classes), but it cost 7.3 points of precision on the rare toxic class
+(observed; Don't 5): pick a recall or precision target for rare positives, as shown at the end.
 
 A threshold chosen on the same items it is scored on is optimistic; cv=k reports a cross-fitted estimate.
 Forwarded items go to the kNN-20 prompt, so they are sent WITH their nearest labelled pool texts.

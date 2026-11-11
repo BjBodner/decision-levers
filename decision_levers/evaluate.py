@@ -157,7 +157,7 @@ def tost(diffs: Sequence[float], margin: float = 0.02, clusters: Sequence | None
 
 
 def holm(pvals: Mapping[str, float], alpha: float = 0.05) -> dict[str, dict]:
-    """Holm step-down over a pre-registered family: adjusted p and reject flag per test."""
+    """Holm step-down over a family of tests fixed in advance: adjusted p and reject flag per test."""
     m, out, running, still = len(pvals), {}, 0.0, True
     for i, k in enumerate(sorted(pvals, key=lambda k: (pvals[k], k))):
         running = max(running, min(1.0, (m - i) * pvals[k]))

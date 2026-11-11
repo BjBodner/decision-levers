@@ -1,9 +1,11 @@
-"""03: one-line definitions, which rescue cryptic option ids.
+"""03: names and one-line descriptions. Compares four ways to present the options: readable names, names with a
+one-line description, cryptic ids, and ids with a description.
 
-DO this when option names are ids or jargon. In the paper (confirmatory) cryptic tool ids alone scored 2.3%; with
-definitions 84.4%, no more than 2 points below readable names with definitions (non-inferior). Definitions written
-blind on three further datasets were no more than 2 points below names on average, but LEDGAR was 2.4 below (Run 3).
-Definitions on readable names added +5.8.
+Do 2: name options by what they do, and add a one-line description, above all for unfamiliar, invented or
+brand-like names. In the paper (Run 9, secondary) a description added 10.7 points to MetaTool's tool names and 23.8
+on an invented catalogue; names cut to an invented brand word fell to 5.0%, close to the 2.1% of cryptic ids. Ids
+with a description did about as well as names with one there, but were 2.3 points below on fresh items (Run 8, not
+shown within 2), so ids with descriptions are one option, not the default.
 """
 from _common import backend_from_args, show
 

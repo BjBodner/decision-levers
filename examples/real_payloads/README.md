@@ -1,6 +1,6 @@
 # Real payloads
 
-`flagship_banking77.json` is the paper's flagship worked example (Figure 4; Appendix M), copied unchanged from the
+`flagship_banking77.json` is the paper's flagship worked example (Figure 3; Appendix M), copied unchanged from the
 research project's `paper/worked_examples/` (SHA-256 `98168df1…b107303e`). It holds one Banking77 test question
 (`b77full-test-2966`, *"Top up on my Google Pay isn't working."*, gold `apple_pay_or_google_pay`) sent to Jev 1.13
 three ways in the paper's Run 1:

@@ -1,91 +1,177 @@
 # decision-levers
 
-**Information, not instructions.** Tested prompting levers for typed decision models, and the ones that do nothing.
+**Rules of thumb for decision models: what makes performance better (or worse).** Starter code for the paper's
+do's and don'ts, and the evaluation steps that tell a real effect from noise.
 
 > Independent project. Not affiliated with, funded by, or endorsed by TypeSafe. 'Jev' and 'TypeSafe' are used only to name the API this code calls.
 
 Paper: arXiv link added on publication.
 
-A typed decision model takes a text, a closed list of options and an instruction, and returns a probability for
-each option. It answers from two sources: what it already knows (its prior), and what the request tells it (the
-evidence). Pre-defined benign wrappers, which carry no information about the label (a persona, politeness,
-capitals, unrelated questions packed alongside), stayed within ±2 accuracy points. Edits that add information
-(retrieved labelled examples, one-line definitions, true class shares) helped, and wrong information (mislabelled
-examples, shuffled shares) hurt. With enough labels, prior and evidence can also be combined outside the prompt, by
-multiplying one bare call by local models; whether that is good enough for your data is something to measure on
-your data. This package implements each approach the paper tested on TypeSafe Jev 1.13, plus the evaluation
-protocol that tells real effects from noise. Results come from four pre-registered runs (25 of 29 tests passed),
-the third deposited publicly before its first call.
+A typed decision model takes a text and a closed list of options and returns a probability for each option. The
+paper asked which changes to a request make such a model more or less accurate. It screened about 60 techniques on
+TypeSafe's Jev 1.13, re-tested the key claims in eight confirmatory runs, repeated the main tests on other decision
+models, and checked them on four private datasets that no model can have seen. In short: wording wrappers (persona,
+politeness, capitals) did not help. Information the model lacks did: retrieved labelled examples, and option names
+that say what the option does, with a one-line description. Wrong information hurt, most when wrong labels all point
+to one rival. With 5 labels per class, put retrieved examples in the prompt; with 100, the prompt is still the
+default, and combining one plain call with local models is the route for when pool texts must not leave your
+machine. Sizes differ between models, so confirm on yours. This package implements each approach and the checks.
+
+## How a call works
+
+One request holds the text to classify (the *state*), a question and the options. Each option has a name and can
+carry a description. Extra information goes in one of three places: the question's wording, a one-line definition
+in an option's description, or labelled examples there. Examples come from a labelled *pool*: before the call, on
+your machine, you pick the pool texts nearest to the text (or random ones) and write them under their labels. The
+answer is one probability per option.
+
+```
+ optional, on your machine, before the call:
+ labelled pool --> pick the examples nearest to the text (or at random) ------------+
+                                                                                    |
+ +------------------------ the request you send --------------------------------+   |
+ | state     "My card was declined at the shop."                                |   |
+ | question  "Which team should handle this?"  <-- wording: persona, politeness |   |
+ | options   Card Payments                                                      |   |
+ |             examples     "card refused at till" ...  <---------------------------+
+ |             description  "Failed card payments."  <-- one-line definition    |
+ |           Refunds, Fraud  (names only; one box per option)                   |
+ +------------------------------------------------------------------------------+
+                                         |
+                                         v
+                                decision model API
+                                         |
+                                         v
+             returned: Card Payments 0.86 | Refunds 0.09 | Fraud 0.05
+```
+
+What each addition did to accuracy against the *bare call* (the request with nothing added), from the paper's
+Figure 2b: one fixed example per option +1.5, random pool examples +3.1, nearest pool examples +4.7 (Jev 1.13, Run
+8); a one-line definition per option +11 (MetaTool) to +24 (invented names); persona or polite wording ≈ 0. A pool
+with 30% wrong labels cost −13 against a clean pool, the mean of six other APIs. The rows come from different runs
+and do not add up.
+
+In code: `Request(state, question, options)` is the request, `add_examples` fills the examples rows from a
+`LabelledPool`, `add_definitions` fills the descriptions, and `backend.decide(request)` returns the probabilities.
+
+## Rules of thumb
+
+The paper's Table 2. Effects are accuracy points on Jev 1.13 unless stated. Counts of other models are out of 7
+(Run 5, shared items) or 6 (Run 8, fresh items, the stronger evidence; Run 10, private data). Status words:
+*confirmed* = a planned test passed with classes resampled; *observed* = found after the fact, or passed only with
+items resampled; *secondary* = an estimate planned in advance with no pass rule; *not shown* = a planned test that
+did not pass (never "no effect").
+
+| Rule | Evidence | Status | In this package |
+|---|---|---|---|
+| **Do 1.** Give it information it lacks. | Retrieved examples +5.9 to +11.2 (balanced pools), +7.7 on fresh items, +1.9 from a natural-share pool; 4 of 6 others on fresh items (Decider Flash −14.5), 3 of 6 on private data; two models failed on long texts | confirmed; partially transfers | `add_examples`; `examples/02` |
+| **Do 2.** Name options by what they do, and add a one-line description, above all for unfamiliar, invented or brand-like names. | One-word names −10.7 against two-word names; a description +10.7 (MetaTool), +23.8 on an invented catalogue (+16.8 to +39.8 on 6 others); ids with a description −0.8 and 0.0 against names with one | secondary; names vs ids not shown | `add_definitions`, `rename_to_ids`, `map_back`; `examples/03` |
+| **Do 3.** Audit your pool's labels. | 30% confusable wrong labels −7.0, harm on 6 of 6 others; a 10% audit won back about 1 | confirmed harm; audit secondary | guidance only (`LabelledPool.with_wrong_labels` simulates uniform noise; `examples/10`) |
+| **Do 4.** At 5 per class, use the prompt. | +3.1 over the bare call, pools redrawn; the local shortcut trailed by 1.2 | confirmed | `add_examples`, `LabelledPool.cap(5)`; `examples/02` |
+| **Do 5.** At 100 per class, prefer the prompt unless privacy rules it out. | The local combination trailed by 0.7 in both fresh-item tests and had lower small-class recall; it sends no pool text | not shown | `combine`, `tempered_combine`; `examples/05`, `examples/11` |
+| **Do 6.** Confirm on your model. | Gains vary by model (SD 3.5); Jev 1.14 lost 3.7 more to wrong labels; 100 to 200 items rank near-ties right 56 to 64% | observed | `evaluate` (`holdout_split`, `null_controls`, `compare`, `freeze`, `holm`); `examples/09`, `examples/11` |
+| **Don't 1.** Expect benign wrappers to help. | Persona, politeness, capitals, packed questions within ±2; persona and politeness on 4 of 7 others; a gain of about 1 is not ruled out | confirmed | `add_persona`, `add_emphasis`, `add_politeness` (to reproduce the null); `examples/10` |
+| **Don't 2.** State unmeasured shares. | Shuffled shares −1.1, stale shares −11.5; stale lower on 6 of 6 others; true shares not shown to help | observed | `state_shares`, `correct_shares`; `examples/04` |
+| **Don't 3.** Let wrong labels pile on a rival. | One rival vs spread: −13.8 on Jev, −2.8 to −10.1 on 6 of 6 others | confirmed | guidance only (`relabel_top` in `examples/10` spreads wrong labels over rivals) |
+| **Don't 4.** Assume placement is neutral: test it on your model. | Penalty larger inside descriptions on Jev, and on 3 of 6 others; smaller on 2 | confirmed | guidance only (`add_examples` puts examples in the option descriptions; no separate block is implemented) |
+| **Don't 5.** Judge rare classes by accuracy. | A cascade within 1.5 points on accuracy lost 7.3 points of toxic-class precision | observed | `evaluate.class_metrics`; `ClassifierFirstCascade(min_recall=, min_precision=)`; `examples/06`, `examples/11` |
+| **Don't 6.** Treat wording as security. | A guard sentence, spotlighting and a claim field all fell to a score-blind search | observed | guidance only |
+
+Don't 1 covers benign wrappers only. The paper did not vary format, option order, the option set, question
+polarity or rule wording, and those can move a model a lot: rewording a ticket-priority rule moved Jev by 24 points
+(cited in the paper). Test such changes as content. Details: [docs/what_not_to_do.md](docs/what_not_to_do.md).
 
 ## Which approach?
 
-The label budget decides where to combine the model's prior and the evidence. **C1/C2/C3/C4** = confirmed in Run
-1/2/3/4; **E** = exploratory; "item-level" = not confirmed under class clustering.
+The label budget decides where your labelled data goes: into the prompt as examples, or into local models combined
+with one bare call on your machine.
 
-**How many labelled examples per class do you have?**
-
-- **About 5.** Put the nearest labelled examples in the prompt (`add_examples`). Run 2: +3.6 and +2.1 points over
-  the bare call and +17.3 and +16.1 over a tuned classifier on tweets and complaints (C2, item-level). Run 3, four
-  more datasets: +2.1 [+0.0, +4.1] over the bare call and +10.8 over a tuned classifier (secondary, no decision).
-  Run 4, three more datasets: +2.9 [+0.7, +4.9] over the bare call and +9.1 [+7.3, +11.2] over a tuned classifier
-  (secondary). A bare call multiplied by a local classifier was not shown non-inferior to the prompt on those three
-  datasets (Run 4: X1a), so its standing at this budget is not established.
-- **About 100.** Compare one bare call × a kNN vote × a tuned classifier (`combine(bare, vote, lr)`, run on your
-  machine) with the prompt **on your own held-out data** (`examples/11`). It was no more than 1.5 points below the
-  prompt on tweets and complaints (non-inferior; C2, item-level); on fresh items of four further datasets it was
-  inconclusive (Run 3), and on three further datasets it was not shown non-inferior (Run 4: X1b). Across six pool
-  draws of the Run 2 items the difference was above −1.5 every time but on both sides of zero (Run 4, secondary),
-  so one pool draw is not enough to decide. It sends only the item. **Small-class caveat:** on CFPB its recall on
-  the smallest class was 10 to 16 points below the prompt's lowest class recall (E; intervals cross 0), so compare
-  per-class recall, not just accuracy (`evaluate.class_metrics`).
-- **Time-split caution.** If your labelled pool is older than the traffic you will score, and holds the natural
-  class mix (a handful of examples for the tail classes), check both approaches on recent held-out items before
-  choosing. On CFPB, with a 2025 pool of 800 complaints at natural shares and 2,000 complaints received in 2026,
-  the retrieval prompt gave no gain over the bare call (+0.05 [−0.6, +0.8]), and the local combination fell 10.9
-  points below the prompt, with 17.3% recall on payday loans (7 pool examples; Run 4, secondary). The class mix had
-  shifted too: credit reporting was 75.8% of the 2025 complaints and 3.0% of the 2026 test items.
-- **If vendor calls must be cut:** a classifier-first cascade (`ClassifierFirstCascade`). The local classifier
-  answers the items it is sure of; **the other items go to the prompt with their nearest labelled examples**, so a
-  cascade reduces what leaves your machine but does not remove pool text. On ToxicChat it sent 8% of items and was
-  no more than 1.5 points below the prompt on accuracy (C2), but toxic-class precision fell 7.3 points (E): choose
-  the threshold on recall or precision, cross-fitted.
-
-**At any budget**
-
-- **Always:** define cryptic option names (no more than 2 points below readable names on average, C1, C3; LEDGAR
-  2.4 below). **Use class shares only if live traffic matches them** (+1.9 over none, C2, item-level); otherwise
-  re-estimate them and correct the bare answer after the call (E). Both routes trade minority recall for accuracy
-  and lost 5 to 8 points under a shifted class mix (E). **Confirm before you ship** (`examples/09`): held-out items
-  de-duplicated against the pool, content-free controls, analysis frozen before testing. The paper's tests used
-  938 to 3,424 items; a team with 5 labels per class may not have that many, and should read the 5-per-class rule
-  as the paper's confirmation, not theirs (E).
-- **Never:** expect a persona, politeness, capitals or packed unrelated questions to help (all within ±2 points;
-  C1, C3). Trust pool labels unchecked (three wrong labels cost 13 to 34 points in Run 1; in Run 3 the harm grew
-  with each correct example relabelled). A wrong label both removes correct evidence and adds evidence for a rival:
-  it costs most when it takes the last correct example, and more when several wrong labels point to one class
-  (C4). Judge rare classes by accuracy (use precision and recall at your operating point).
-- **Further cautions (E):** prompt wording, spotlighting and a separate claim field are not security boundaries,
-  and screen results need a magnitude floor. Vendor cost ($0.0008 to $0.13 per 1,000 decisions) will not decide.
-
-R1, the "within ±2" result, covers pre-defined benign wrappers only. Reworded decision rules, renamed options,
-natural answer-preserving context and adversarial suffixes do move Jev (cited in the paper); test them as content.
+- **No labels.** Bare call with readable names; add a one-line description per option when names are ids, jargon,
+  brands or invented (`examples/01`, `examples/03`). Do not state class shares you have not measured. Shares
+  estimated from 100 labelled recent items came within about a point of the true shares (`examples/04`).
+- **About 5 labels per class: use the prompt** (`add_examples`, `examples/02`). On fresh items, with the pool
+  redrawn, it beat the bare call by 3.1 points [+1.8, +4.6] (confirmed). Two local shortcuts built on one bare call
+  trailed it: × a nearest-centroid classifier −1.2, × a tuned classifier −0.6; neither was shown within 1.5
+  points. Local classifiers used alone scored up to 18 points below the bare call.
+- **About 20 to 100 labels per class: prefer the prompt unless privacy rules it out.** The prompt kept gaining
+  (+3.6 at 20, +4.7 at 100 per class; secondary). The local combination (one bare call × a nearest-neighbour vote ×
+  a tuned classifier, `combine(bare, vote, lr)`, `examples/05`) trailed the prompt by 0.7 points [−1.6, +0.1] in
+  both fresh-item tests; neither showed it matching the prompt. Its mean worst-class recall was 29.7% against
+  42.8% for the prompt (secondary). Its advantage is privacy: only the item goes to the vendor. If you go local,
+  compare both on your own held-out data, per-class recall included (`examples/11`).
+- **You must cut vendor calls.** A classifier-first cascade (`ClassifierFirstCascade`, `examples/06`) answers the
+  items the local classifier is sure of and sends the rest to the prompt, with their nearest labelled examples. On
+  ToxicChat it sent 8.2% of items and was no more than 1.5 points worse on accuracy (confirmed for these two
+  classes), but toxic-class precision fell 7.3 points (observed). Set the threshold on recall or precision,
+  cross-fitted (`cv=5`).
+- **Your pool is older than your traffic.** A class-mix shift breaks local models. With a 2025 pool and 2026
+  complaints, credit reporting fell from 74% of the pool to 3% of the test items, and the local combination fell
+  10.9 points below the prompt. Re-estimating the shares from unlabelled 2026 items cut the gap to 2.0 (observed),
+  but on a second split (2023 to 2024) it did not help. Score both approaches on recent held-out items.
+- **Short intent sets, cost-bound.** A labels-only shortlist (`decide_with_shortlist`, `examples/07`) sends no pool
+  text and lost about 2 points against the examples prompt on intent sets (observed); it hurt on topical text.
 
 | Your situation | Try first | Example |
 |---|---|---|
-| No labels | Bare request; one-line definitions if option names are ids or jargon; shares only if live traffic matches, else post-hoc correction with re-estimated shares | `01`, `03`, `04` |
+| No labels | Bare call; readable names; one-line descriptions for unclear names | `01`, `03` |
 | About 5 labels per class | Retrieved examples in the prompt | `02` |
-| About 100 labels per class | Compare the local combination (plain or tempered) with the prompt on your own held-out data, per-class recall included | `05`, `11` |
-| Pool older than live traffic, natural class mix | Score both approaches on recent held-out items; check tail-class recall before using the local combination | `11` (its split is random: hold out your most recent rows yourself) |
+| About 100 labels per class | The prompt; the local combination if pool text must not leave your machine, checked on your data | `02`, `05`, `11` |
 | Vendor calls must be cut | Classifier-first cascade, threshold on recall or precision, cross-fitted | `06` |
-| Short, balanced intent sets, cost-bound | Labels-only shortlist (most items need no call) | `07` |
+| Pool older than live traffic | Score both approaches on recent held-out items; check small-class recall | `11` (its split is random: hold out your most recent rows yourself) |
 | Several decisions about the same text | Pack them into one request, main question last | `08` |
-| Before shipping anything | Held-out, de-duplicated items; null controls; freeze; confirm | `09` |
+| Before shipping anything | Held-out, de-duplicated items; content-free controls; freeze; confirm | `09` |
 | Your own CSV | Load, split without near-duplicate leaks, compare every approach | `11` |
-| See a real request and answer | The paper's flagship Banking77 payloads, replayed offline | `12` |
+| See a real request and answer | The paper's Banking77 worked example, replayed offline | `12` |
 
-Details and evidence levels for each DON'T: [docs/what_not_to_do.md](docs/what_not_to_do.md). Pseudocode for
-every approach and for the protocol: [docs/algorithms.md](docs/algorithms.md). The fitted prior × evidence model,
-what it predicts and where it fails: [docs/why_it_works.md](docs/why_it_works.md).
+## Results across models
+
+**Other decision models.** Run 5 sent seven other decision models the exact requests Jev 1.13 had answered; Run 8
+sent the key tests to six of them and a general chat model, on items this study had never sent. Directions mostly
+agree; sizes differ.
+
+- **What hurts transfers best.** 30% confusable pool noise cost −12.6 points [−20.9, −4.3] on average and the
+  one-rival penalty −6.3 [−8.4, −4.2], both on 6 of 6 models (observed pooled means). With 30% confusable noise,
+  four models fell well below their own bare call (by 7.5 to 27.9 points): for them a noisy pool is worse than no
+  pool. The one-rival penalty was smaller on every other model than on Jev (−13.8).
+- **Retrieved examples** helped the average model by +5.6 [+2.0, +9.3] on Run 5's shared items (6 of 7). On fresh
+  items the gain was confirmed on 4 of 6; Decider Flash was opposite (−14.5). Pooled: +1.1 [−5.8, +8.0], or +4.2
+  [+0.9, +7.5] without Decider Flash.
+- **Wrappers** stayed within ±2 on 4 of 7 models. **Ids with definitions** were within 2 points of names on 1 of 6,
+  so readable names stay the default. **Placement** transferred only in part (larger inside descriptions on 3 of 6,
+  smaller on 2). **Stale shares** lowered accuracy on all six in point estimate, but the loss was shown on only two.
+- **The chat model** (read by option log-probabilities, on MetaTool only) showed the retrieval gain (+12.2), the pool
+  noise harm and the one-rival penalty.
+
+**Leakage check.** Every public benchmark may be in a vendor's training data. Runs 9 and 10 sent eight techniques
+to eight models on four private synthetic datasets (KitchenOps-80, OpsDeck-24, ScotLease-25, BeamDesk-14) and on
+public items. The techniques ranked much the same on both (rank correlations 0.76 to 1.00), and one of the six
+other models' 48 effects changed sign. Cryptic ids, three wrong labels and pool noise hurt on private data on every
+model; wrappers stayed within 1.3 points of zero. Descriptions helped more on private data (+7.6 against +1.0 on
+the six others), most on invented names. Retrieved examples weakened (+1.1 public, +0.3 private on the six others;
+held on 3 of 6).
+
+**Caveat: examples misled two models on long texts.** On ScotLease (long lease clauses), Decider Flash fell from
+98.9% to 28.1% with three correctly labelled examples, yet scored 96.9% when the same examples carried wrong
+labels. On BeamDesk, d1-ultra fell from 90.6% to 53.2% with nearest examples and put 490 of 1,200 answers on one
+team. Both did the same on public LEDGAR, so this is model behaviour, not leakage. **Test examples on your model,
+on your longest texts, before you rely on them.** The private items were written by language models and may be
+cleaner than real data.
+
+## What didn't work
+
+From the paper's Table 7 (Jev 1.13 unless stated; "not shown" never means "no effect"):
+
+- Persona, politeness, capitals, packed unrelated questions: −0.3 to +0.3 against the bare call.
+- Stating true class shares: +1.9 (observed) and −0.4 (not shown). Shuffled shares: −1.1.
+- A natural-share pool: +1.9 [−0.4, +4.9] over the bare call, 1.4 below a balanced pool (not shown).
+- Auditing the most-retrieved examples first instead of a random 10%: +0.3 [−0.4, +0.9] (not shown).
+- Calibrating the bare call (contextual, batch): −2.2 and +0.2; retrieval stayed 10.0 and 7.5 ahead.
+- The local combination at 100 per class (−0.7 in both tests) and the local shortcuts at 5 per class (−1.2, −0.6).
+- Re-estimating shares after a time split (2023 to 2024): −0.1; worst-class recall 49.5% → 22.2%.
+- Wording defences (guard sentence, spotlighting, claim field) against 100 score-blind attacks.
+- Ids with definitions instead of names on fresh items: −2.3 [−3.8, −1.0] (not shown at a margin of 2).
+- From the development screen: dropping pool items the bare call disputes (80.0% vs 80.2%), model-written
+  descriptions, definitions on top of examples (85.8% → 82.8%), and a closing reminder against injection.
 
 ## Quickstart
 
@@ -111,14 +197,14 @@ p_prompt = backend.decide(add_examples(req, pool))           # examples in the p
 bare = backend.decide(req)                                    # or: one bare call ...
 vote = knn_vote(req.state, pool, req.options)
 lr = TunedLR(pool, list(req.options)).fit().predict([req.state])[0]
-p_local = combine(bare, vote, lr)                             # ... combined locally (plain product, G5)
-p_temp = tempered_combine(bare, vote, lr)                     # tempered: the paper's frozen exponents (E)
+p_local = combine(bare, vote, lr)                             # ... combined locally (plain product)
+p_temp = tempered_combine(bare, vote, lr)                     # tempered product, the paper's frozen exponents
 ```
 
-The tempered product raises the three inputs to exponents, by default the paper's frozen set for about 100 labels
-per class, `PAPER_EXPONENTS = (0.358, 0.131, 0.620)` (bare, vote, classifier; exploratory, fitted with the paper's
-dense features). Refit them on your own held-out items with `fit_exponents(bare, [votes, lrs], gold, cv=5)` and keep
-the plain product unless the cross-fitted log-loss is lower.
+The tempered product raises the three inputs to exponents, by default `PAPER_EXPONENTS` (bare, vote, classifier),
+frozen before the paper's Run 4 and fitted with its dense features. In Run 4 it was −0.4 [−1.2, +0.3] against the
+prompt (secondary). Refit the exponents on your own held-out items with `fit_exponents(bare, [votes, lrs], gold,
+cv=5)` and keep the plain product unless the cross-fitted log-loss is lower.
 
 The cascade threshold is fitted on held-out items. A threshold chosen on the same items it is scored on is
 optimistic, so ask for a cross-fitted estimate:
@@ -140,109 +226,24 @@ Every example takes `--mock` (default, offline) or `--jev` (paid; responses are 
 The mock is a keyword-overlap fake built to show the mechanics; it mimics the direction of the paper's findings by
 construction, so its numbers are not evidence. Every mock run says so.
 
-## Results from the paper
-
-All on Jev 1.13. **Confirmatory** = pre-registered, frozen by a hash before any call, Holm-corrected: Run 1 used
-held-out test items, Run 2 items never sent in any request, Run 3 fresh items of four further datasets (MASSIVE,
-LEDGAR, MetaTool, new CFPB rows), deposited publicly before its first call and clustered by gold class, Run 4 fresh
-items of MASSIVE, LEDGAR and MetaTool, frozen internally (not deposited) and clustered by gold class.
-**Secondary** = pre-specified estimates without a decision. **Exploratory** = development screens or analyses after
-unsealing. Differences in accuracy points, 90% intervals in brackets. A non-inferiority result is reported as "no
-more than X points below", never as equal.
-
-| Lever | Result | Evidence |
-|---|---|---|
-| **Wording (R1)** | | |
-| Persona, capitals, politeness vs bare (tweets, CFPB) | each within ±2; six intervals inside [−1.3, +0.5] | Confirmatory, Run 1 |
-| Seven unrelated questions packed with the main one | within ±2 | Confirmatory, Run 1 |
-| 5 personas and 5 politeness prefixes × 3 paraphrases vs bare, 4 datasets | persona −0.3 [−1.0, +0.3], politeness −0.1 [−0.5, +0.4]; both within ±2 | Confirmatory, Run 3 |
-| Same, finer cells (stimulus × paraphrase, 200 items each) | 4 of 120 cells beyond ±2, down to −4.0 [−7.1, −1.0] | Exploratory |
-| **Information (R2)** | | |
-| Retrieved examples (kNN-20, 80 to 100 labels per class) vs bare | +11.2 [+7.5, +15.2] Banking77; +5.9 [+4.2, +7.6] CLINC150; +8.7 [+7.5, +10.0] financial tweets | Confirmatory, Run 1 |
-| True class shares vs none (tweets + CFPB) | +1.9 [+1.1, +2.7] (tweets +2.9, CFPB +0.9) | Confirmatory, Run 2 (item-level) |
-| True vs shuffled class shares | +6.8 tweets, +6.2 CFPB | Confirmatory, Run 1 |
-| Shares applied after the call vs stated | +1.3 tweets, +2.0 CFPB | Exploratory |
-| Definitions on readable tool names (MetaTool) | +5.8 [+4.3, +7.1] | Confirmatory, Run 1 |
-| Cryptic ids + definitions vs names + definitions (MetaTool) | −0.5 [−1.5, +0.4]: no more than 2 points below (ids alone: 2.3%) | Confirmatory, Run 1 |
-| Ids + definitions written blind vs ids alone; vs names + definitions (MASSIVE, LEDGAR, CFPB) | +73.2 [+63.2, +83.5]; −1.1 [−1.8, −0.5]: no more than 2 points below on average, but LEDGAR 2.4 below | Confirmatory, Run 3 (not consistent across datasets) |
-| Wrong labels on the 3 nearest shown examples | −33.5 Banking77, −13.4 tweets | Confirmatory, Run 1 |
-| Relabelling 0 to 3 of three correct shown examples, 4 datasets | slope −12.3 [−13.3, −11.3] per example; cumulative cost 2.9, 11.4, 38.2 (steps −2.9, −8.5, −26.8; descriptive) | Confirmatory, Run 3 (monotone; not linear) |
-| Rank effect at matched evidence (nearest vs random ranks relabelled) | +1.2 [−0.4, +2.7], not confirmed | Confirmatory, Run 2 |
-| **Label budget (R3)** | | |
-| 5 per class: kNN-20 prompt vs a tuned classifier / vs bare | tweets +17.3 / +3.6; CFPB +16.1 / +2.1 | Confirmatory, Run 2 (item-level) |
-| 5 per class, 4 datasets: prompt vs bare; vs tuned classifier; vs nearest centroid | +2.1 [+0.0, +4.1]; +10.8 [+7.4, +15.0]; +12.0 [+8.1, +17.9] | Secondary, Run 3 |
-| 5 per class: bare × nearest centroid vs the prompt | +2.1 [+1.1, +3.1] for the product (chosen post hoc) | Exploratory |
-| 100 per class: one bare call × vote × tuned classifier vs the kNN-20 prompt (tweets + CFPB) | +1.4 [+0.3, +2.5]: no more than 1.5 points below the prompt | Confirmatory, Run 2 (item-level; class-cluster p .052) |
-| Same, LEDGAR + new CFPB rows / MASSIVE + MetaTool | +0.1 [−2.1, +1.5] / +0.6 [−0.7, +2.0]: inconclusive | Secondary, Run 3 |
-| Same, Banking77, CLINC150, ToxicChat | −0.8 to −1.5, trails the prompt | Exploratory |
-| Tempered product (exponents cross-fitted on gold) vs the prompt | Banking77 +0.2 [−0.4, +0.7]; Run 2 ToxicChat −0.4 [−1.0, +0.1]; CLINC150 −0.9 [−1.4, −0.5] | Exploratory |
-| Plain product, recall on CFPB's smallest class (Payday loan) vs the prompt's lowest class recall | 58.9 vs 68.7 (Run 2 items), 52.6 vs 68.8 (Run 3 items); intervals cross 0 | Exploratory |
-| Retrieval prompt vs a fixed kNN vote (Banking77 + CLINC150) | +3.0 [+2.4, +3.7]: the prompt is better, not equivalent | Confirmatory, Run 1 (test not passed) |
-| Classifier-first cascade, ToxicChat, 8.2% of items sent | −0.2 [−0.8, +0.4]: no more than 1.5 points below the prompt on accuracy | Confirmatory, Run 2 |
-| Same cascade, toxic-class precision | −7.3 [−13.8, −1.1]; on Run 1 items a cross-fitted threshold sending 37% kept precision (−0.3) | Exploratory |
-| Cross-fitted cascades, 5 datasets | 0.5 to 0.75 points below full kNN-20 at 1.7 to 31.6% of items sent | Exploratory |
-| **Other** | | |
-| Three related questions packed vs separate (CFPB) | Δ 0.0 on the main question; 51% fewer input tokens | Exploratory |
-| Labels-only shortlist vs kNN-20 prompt (Banking77) | 91.4 vs 93.7; 62 vs 1,117 tokens; 80% of items without a call | Exploratory |
-| Naive screening rule on content-free edits | promoted or flagged 12 of 53 | Exploratory |
-| Jev 1.14 vs 1.13, four arms on CFPB and MetaTool | point estimates within 2.5 points; under class clusters retrieval and top-3 harm met the pre-registered direction on MetaTool, not CFPB; CFPB persona difference +1.0 [+0.1, +1.8] | Secondary, Run 3 |
-| **Run 4** (fresh MASSIVE, LEDGAR, MetaTool; class clusters; Holm over its 5 tests) | | |
-| Why wrong labels hurt: deleting k correct shown examples vs relabelling them to distinct rivals (mean over k = 1 to 3; 1,057 items) | +13.1 [+11.7, +14.7]: deletion costs less than relabelling | Confirmatory, Run 4 (X3a) |
-| Relabelling to one common rival vs to distinct rivals (mean over k = 2, 3) | −13.2 [−14.7, −11.7]: one rival costs more | Confirmatory, Run 4 (X3b) |
-| Deletion alone: loss at the third (last) correct example minus loss at the second | +10.1 [+7.5, +12.7]: the loss jumps at the last correct example (deletion steps −1.8, −3.8, −13.9; descriptive) | Confirmatory, Run 4 (X3c) |
-| All three correct examples changed: deleted / relabelled to distinct rivals / to one rival, vs the clean display | −19.4 / −47.0 / −67.2 | Descriptive, Run 4 |
-| 5 per class: one bare call × tuned classifier vs the kNN-20 prompt (5,606 items, 104 classes) | −0.6 [−1.7, +0.3]: not shown non-inferior at −1.5 (Holm p .16); below 0 on every dataset | Confirmatory, Run 4 (X1a; test not passed) |
-| 100 per class: bare × vote × tuned classifier (the G5 product) vs the prompt | −0.7 [−1.6, +0.1]: not shown non-inferior at −1.5 (Holm p .16); below 0 on every dataset | Confirmatory, Run 4 (X1b; test not passed) |
-| Same two tests with near-duplicate clusters instead of class clusters | X1a [−1.2, −0.1], X1b [−1.3, −0.2]: both intervals above −1.5 | Secondary, Run 4 (the pre-registered unit is the class) |
-| 100 per class: tempered product (exponents frozen before Run 4) vs the prompt | −0.4 [−1.2, +0.3] | Secondary, Run 4 |
-| 5 per class: prompt vs bare; vs tuned classifier; vs nearest centroid | +2.9 [+0.7, +4.9]; +9.1 [+7.3, +11.2]; +9.8 [+7.8, +12.1] | Secondary, Run 4 |
-| 5 per class: bare × nearest centroid vs the prompt | −0.5 [−1.9, +1.2]: the post hoc +2.1 did not recur on fresh items | Secondary, Run 4 |
-| SuperICL (the classifier's label and confidence stated in the request; MASSIVE, LEDGAR) vs the prompt | −2.3 [−4.1, −0.6] at 5 per class, −1.2 [−2.5, +0.0] at 100: below the prompt at both budgets; Jev returned the stated label on 86.5 to 97.2% of items, so it inherited the classifier's errors | Secondary, Run 4 |
-| Pool redraws, Run 2 items (6 draws): G5 product vs the prompt; 5-per-class prompt vs bare | −1.0 to +0.75 (above −1.5 in 6 of 6, above 0 in 3 of 6: sign not stable); +2.0 to +5.3 (sign stable in 6 of 6) | Secondary, Run 4 |
-| CFPB time split (2025 pool at natural shares, 2,000 complaints from 2026): prompt vs bare; local product vs prompt | +0.05 [−0.6, +0.8]: no gain from retrieval; −10.9 [−12.2, −9.5], payday-loan recall 17.3% vs 71.6% (7 pool examples) | Secondary, Run 4 |
-| Fitted prior × evidence model applied to the X3 arms without refitting | predicted the sign of every contrast (9 of 9 cells) and the deletion jump, but only about half of the two rival effects | Exploratory |
-
-Caveats from the paper: the label-budget results (R3) rest on item-level clusters; under gold-class clustering no
-Run 2 decision passes Holm, Run 3's label-budget estimates were inconclusive, and Run 4 did not show the local
-combination non-inferior at 5 or 100 labels per class on three further datasets. G5's two datasets were chosen after
-exploratory analysis, and its interval conditions on one pool draw: across six pool draws of its items the
-difference stayed above −1.5 but changed sign, so read Run 2's +1.4 as conditional on one draw. Pools were
-class-balanced except in the one time split (CFPB, a single dataset with a shifted class mix); the tasks are mostly
-English single-label choices; one vendor, with one small check of a second version. All four pre-registrations were
-written and run by one author; Runs 1, 2 and 4 were frozen but not deposited, Run 3 was deposited before its first
-call. One Holm correction over all 29 tests (a sensitivity check) would no longer reject T8 and H3.
-
 ## Cost and privacy
 
-**Cost is not the deciding factor.** At Jev's list price ($0.042 per million input tokens) every configuration the
-paper ran cost $0.0008 to $0.13 per 1,000 decisions. Choosing kNN-20 over a bare call adds about $0.07 per 1,000
-decisions on CFPB (about $70 per million) and $0.003 to $0.009 per 1,000 on intent and tool sets. Labelling,
-engineering and monitoring are not counted and will usually cost more. Choose on data exposure, latency and
-small-class recall.
+**Cost is not the deciding factor.** At Jev's billed rate ($0.042 per million input tokens), every design in the
+paper's label-budget comparison cost $0.013 to $0.092 per 1,000 decisions in vendor fees. Using kNN-20 instead of a
+bare call adds about $0.07 per 1,000 decisions on CFPB and $0.003 to $0.009 on the intent and tool sets. The other
+models' list prices were $0.01 to $0.10 per million input tokens. Labelling, engineering and monitoring are not
+counted and will usually cost more. Latency did not separate the designs (median 0.094 s bare, 0.104 s with
+kNN-20, sequential calls in one session). Choose on data exposure and small-class recall.
 
-US dollars per 1,000 decisions, from billed input tokens (exploratory):
+US dollars per 1,000 decisions, tweets | complaints on Run 2's items (the paper's Figure 4):
 
-| Data | Bare | kNN-20 prompt | Local combination | Cascade (share sent) |
-|---|---|---|---|---|
-| Tweets, Run 2 | $0.0196 | $0.0379 | $0.0196 | $0.0131 (34%) |
-| CFPB, Run 2 | $0.0217 | $0.0917 | $0.0217 | $0.0215 (23.5%) |
-| ToxicChat, Run 2 | $0.0135 | $0.0536 | $0.0135 | $0.0044 (8.2%) |
-| MASSIVE, Run 3 | $0.0329 | $0.0370 | $0.0329 | not run |
-| LEDGAR, Run 3 | $0.0240 | $0.0534 | $0.0240 | not run |
-| MetaTool, Run 3 | $0.0199 | $0.0288 | $0.0199 | not run |
-| CFPB, Run 3 | $0.0217 | $0.0905 | $0.0217 | not run |
-
-The local combination's vendor cost is one bare call; the vote and the classifier run locally. The most expensive
-configuration measured, kNN-20 drawn from 5 per class on CFPB, cost $0.129 per 1,000.
-
-**What leaves your machine**
-
-| Approach | Sent to the vendor per decision |
-|---|---|
-| Bare call, local combination | the item |
-| kNN-20 prompt | the item plus up to 20 labelled pool texts (at most 3 per label; 10 for two options), such as other customers' complaints |
-| Classifier-first cascade | nothing for items answered locally; **the item plus its nearest labelled pool texts** for every forwarded item |
-| Labels-only shortlist | nothing when one label is shortlisted; otherwise the item with the shortlisted options |
+| Approach | Vendor cost | Sent to the vendor per decision |
+|---|---|---|
+| Bare call | $0.020 \| $0.022 | the item |
+| Examples prompt (kNN-20) | $0.038 \| $0.092 | the item plus up to 20 labelled pool texts (at most 3 per label; 10 for two options), such as other customers' complaints |
+| Local combination | $0.020 \| $0.022, plus local compute | the item |
+| Classifier-first cascade | $0.013 \| $0.022 (34% \| 23% of items sent) | nothing for items answered locally; **the item plus its nearest labelled pool texts** for every forwarded item |
+| Labels-only shortlist | not in the figure | nothing when one label is shortlisted; otherwise the item with the shortlisted options |
 
 The bare call still sends the item, which may itself be sensitive. `JevBackend` caches answers on disk under
 `~/.cache/decision-levers/responses.sqlite`, keyed by a SHA-256 of the request: it stores the hash, the answers and
@@ -251,11 +252,19 @@ by its terms, not by this package.
 
 ## Model versions
 
-`JevBackend` raises when a response reports another model id than the pinned one. That is deliberate: every number
-above is for `jev-1.13.0`. To move to a new version, rerun your held-out comparison (`examples/09`, `examples/11`)
-with `--jev --model <new id>`, compare it with the pinned version, then re-pin. In the paper's one check on Jev 1.14,
-point estimates stayed within 2.5 points, but not every effect met its pre-registered direction under class
-clustering, and the local combination was not run on 1.14.
+`JevBackend` raises when a response reports another model id than the pinned one. That is deliberate.
+`PAPER_MODEL` is `jev-1.13.0`, the version behind most of the paper's numbers.
+
+- **Jev 1.14** (`jev-1.14.0`) agreed with Jev 1.13's bare top option on 94 to 97% of items and passed all four Run
+  5 tests, but lost 3.7 points more to wrong labels on the same items. So re-run your held-out comparison
+  (`examples/09`, `examples/11`) with `--jev --model <new id>` on every version change, then re-pin.
+- **Other models tested by the paper:** Perplexity Decider v1.2 and Decider Flash, OpenAI Decisions (gpt-6-luna),
+  Microsoft-Decision-1, Liquid d1-ultra, Kev-4B (an open Jev clone) and Upstage Solar Decide (failed its Run 5
+  pilot), plus OpenAI's gpt-6-luna chat model. They are not independent: Decider and Decider Flash are one family,
+  and Microsoft-Decision-1 and Kev-4B share a base generation.
+
+This package ships a backend for Jev only. To test another model, implement the `Backend` protocol (`decide`,
+`decide_many`, `decide_packed`) for its API and run the same examples.
 
 ## Package layout
 
@@ -264,16 +273,18 @@ clustering, and the local combination was not run on 1.14.
 | `request.py` | `Request`, `PackedRequest`, wire format, answer parsing |
 | `backends.py` | `Backend` protocol, `JevBackend`, `MockBackend`, `ReplayBackend` (recorded answers); `decide_wire` for raw bodies |
 | `data/` | `load_csv`; the toy dataset |
-| `retrieval.py` | `LabelledPool` (`from_pairs`, `from_csv`), `TfidfRetriever`, `DenseRetriever` |
-| `levers.py` | `add_examples`, `add_definitions`, `rename_to_ids`, `state_shares`, `correct_shares`, `pack_questions`; phrasing DON'Ts |
+| `retrieval.py` | `LabelledPool` (`from_pairs`, `from_csv`, `cap`, `with_wrong_labels`), `TfidfRetriever`, `DenseRetriever` |
+| `levers.py` | `add_examples`, `add_definitions`, `rename_to_ids`, `state_shares`, `correct_shares`, `pack_questions`; the wrapper DON'Ts |
 | `local.py` | `knn_vote`, `TunedLR`, `combine` (plain or `weights=`), `tempered_combine`, `PAPER_EXPONENTS`, `fit_exponents` |
 | `cascade.py` | `ClassifierFirstCascade` (accuracy, recall or precision targets; cross-fitted report) |
 | `shortlist.py` | `shortlist`, `decide_with_shortlist` |
 | `evaluate.py` | `holdout_split`, `paired_bootstrap`, `tost`, `holm`, `null_controls`, `promotion_floor`, `compare`, `freeze`, `class_metrics` |
 | `toy.py` | a 72-ticket hand-written dataset for the examples |
 
-`examples/real_payloads/` holds the paper's flagship Banking77 request bodies and recorded answers (CC BY 4.0; see
-its README).
+`examples/real_payloads/` holds the paper's Banking77 worked example: request bodies and recorded answers (CC BY
+4.0; see its README). Pseudocode for every approach and for the evaluation protocol:
+[docs/algorithms.md](docs/algorithms.md). A fitted prior × evidence description of Jev, what it predicts and where
+it fails: [docs/why_it_works.md](docs/why_it_works.md).
 
 ## License
 

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "decision-levers"
-version = "0.2.0"
-description = "Information, not instructions: tested prompting levers for typed decision models (TypeSafe Jev API). Independent project, not affiliated with TypeSafe."
+version = "0.3.0"
+description = "Rules of thumb for decision models: what makes performance better (or worse). Starter code for typed decision APIs (TypeSafe Jev). Independent project, not affiliated with TypeSafe."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]

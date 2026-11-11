@@ -1,4 +1,4 @@
-"""decision-levers: information, not instructions, for typed decision models.
+"""decision-levers: rules of thumb for typed decision models (what makes performance better or worse).
 
 Independent project. Not affiliated with, funded by, or endorsed by TypeSafe. 'Jev' and 'TypeSafe' are used only
 to name the API this code calls.
@@ -13,7 +13,7 @@ from .request import PackedRequest, Request
 from .retrieval import DenseRetriever, LabelledPool, TfidfRetriever
 from .shortlist import decide_with_shortlist, shortlist
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 __all__ = [
     "PAPER_MODEL", "Backend", "BackendError", "JevBackend", "MockBackend", "ReplayBackend",
     "ClassifierFirstCascade", "load_csv", "add_definitions", "add_examples", "correct_shares", "map_back",

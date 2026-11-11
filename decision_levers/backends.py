@@ -23,7 +23,7 @@ from .request import PackedRequest, Request, parse_answer
 
 URL = "https://api.typesafe.ai/v1/systemone"
 MODELS_URL = "https://api.typesafe.ai/v1/models"
-PAPER_MODEL = "jev-1.13.0"                         # the version every result in the paper was measured on
+PAPER_MODEL = "jev-1.13.0"                         # the Jev version behind most of the paper's results
 KEY_ENVS = ("TYPESAFE_API_KEY", "JEV_API_KEY")     # the first is the one the research code read
 RETRY_STATUS = {408, 429, 500, 502, 503, 504, 529}
 Probs = dict[str, float]

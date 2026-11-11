@@ -1,9 +1,10 @@
 """04: class shares, stated in the request or (better) applied after the call.
 
-In the paper: true shares beat no shares by +1.9 points (confirmatory) and beat shuffled shares by +6.2 to +6.8
-(confirmatory; most of that is the cost of wrong shares). Correcting the bare answer after the call beat stating
-the shares by 1.3 and 2.0 points and added no tokens (exploratory). Use shares only if live traffic matches them:
-both routes trade minority-class recall for accuracy and lost 5 to 8 points under a shifted class mix (exploratory).
+Don't 2: state unmeasured shares. In the paper true shares were not shown to help (+1.9 observed in Run 2, -0.4
+not shown in Run 8), while wrong shares hurt: shuffled shares cost 6.2 to 6.8 points against true ones, and last
+year's shares 11.5 (observed). Correcting the bare answer after the call beat stating the shares by 1.3 and 2.0
+points on development data and adds no tokens (observed). Both routes lost 5 to 8 points under a shifted class mix.
+If you use shares, measure them first: shares from 100 labelled recent items came within about a point.
 """
 from _common import backend_from_args, show, tokens_per_call
 

@@ -1,8 +1,8 @@
 """08: several questions about one state in ONE request.
 
-In the paper three related questions about one complaint, packed, matched three separate calls (argmax agreement
-96-100%, exploratory) and saved 51% of input tokens; seven unrelated companion questions left the main answer
-within +-2 points (equivalence, confirmatory). Put the main question last.
+In the paper three related questions about one complaint, packed, left the main answer unchanged (80.75% both
+ways, observed) and saved 51% of input tokens; seven unrelated companion questions left the main answer within +-2
+points on fresh items (Run 8). Put the main question last.
 """
 from _common import backend_from_args, tokens_per_call
 

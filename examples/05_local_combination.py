@@ -1,11 +1,11 @@
 """05: one bare call combined locally with a kNN vote and a tuned classifier (product of experts).
 
-At about 100 labels per class this was no more than 1.5 points below the retrieval prompt on tweets and complaints
-(non-inferior, Run 2, item-level clusters), with only the item sent to the vendor and no pool text. On four further
-datasets (Run 3, class clusters) the estimate was inconclusive; it trailed by 0.8 to 1.5 points on Banking77,
-CLINC150 and ToxicChat, and on CFPB its smallest-class recall trailed the prompt's by 10 to 16 points (exploratory).
-Compare it with the prompt on your own held-out data (examples/11). The tempered product uses the paper's frozen
-exponents (exploratory; refit them on your data with fit_exponents).
+Do 5: at about 100 labels per class, prefer the prompt unless privacy rules it out. In the paper this product
+trailed the retrieval prompt by 0.7 points [-1.6, +0.1] in both fresh-item tests (Runs 4 and 8), and neither showed
+it matching the prompt; its mean worst-class recall was 29.7% against 42.8% (secondary). Its advantage is that only
+the item goes to the vendor, no pool text. If privacy needs it, compare it with the prompt on your own held-out data
+(examples/11). The tempered product uses the exponents frozen before Run 4 (-0.4 against the prompt there,
+secondary); refit them on your data with fit_exponents.
 """
 from _common import backend_from_args, show
 

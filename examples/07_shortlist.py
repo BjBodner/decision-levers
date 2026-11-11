@@ -1,8 +1,8 @@
 """07: labels-only shortlist. Send only the labels of the 5 nearest neighbours as options, no example text; if
 they all agree, answer without a call.
 
-Exploratory in the paper: on short-intent sets it stayed within about 2.5 points of the kNN-20 prompt at about 5%
-of its tokens, and about 80% of items needed no call. On topical text (tweets) it fell BELOW the bare model.
+Observed in the paper: on Banking77 and CLINC150 it lost 2.2 and 2.4 points against the kNN-20 prompt at about 5%
+of its tokens, and it sends no pool text. On topical text (tweets) it fell BELOW the bare model.
 """
 from _common import backend_from_args, show, tokens_per_call
 

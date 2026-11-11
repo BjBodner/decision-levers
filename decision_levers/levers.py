@@ -69,7 +69,9 @@ def add_definitions(request: Request, defs: Mapping[str, str]) -> Request:
 def rename_to_ids(request: Request, prefix: str = "option_") -> tuple[Request, dict[str, str]]:
     """Replace option names by neutral ids (``option_01``.. in alphabetical order of the names), keeping the
     request's option order and descriptions. Returns the new request and ``id -> original name``. Ids WITHOUT
-    definitions collapse accuracy (2.3% in the paper); ids WITH definitions match readable names."""
+    definitions collapse accuracy (2.1% on the paper's invented catalogue). With a one-line description ids did as
+    well as names in the paper's names experiment, but were 2.3 points below names on fresh items (not shown within
+    2), so readable names with descriptions stay the default."""
     names = sorted(request.options or {})
     to_id = {n: f"{prefix}{i + 1:02d}" for i, n in enumerate(names)}
     req = request.with_options({to_id[o]: d for o, d in (request.options or {}).items()})
@@ -123,7 +125,8 @@ def mean_probs(answers: Sequence[Mapping[str, float]], floor: float = 1e-4) -> d
 def pack_questions(main: Request, others: Mapping[str, Request], main_last: bool = True,
                    main_name: str = "q") -> PackedRequest:
     """Several questions about ONE state in one request; with seven unrelated questions the main answer stayed
-    within +-2 points of asking it alone (confirmatory), and packing related ones saved about half the input tokens. The paper's rule puts the main question LAST."""
+    within +-2 points of asking it alone (fresh items, Run 8), and packing three related ones saved 51% of input
+    tokens. The paper's rule puts the main question LAST."""
     qs = [(n, r) for n, r in others.items()]
     order = qs + [(main_name, main)] if main_last else [(main_name, main)] + qs
     return PackedRequest(main.state, dict(order))
@@ -139,12 +142,13 @@ POLITENESS = "Please, if you would be so kind, help me with this question. Thank
 
 
 def add_persona(request: Request, persona: str = PERSONA) -> Request:
-    """DON'T: a persona prefix. No measurable effect (confirmatory equivalence test)."""
+    """DON'T: a persona prefix. Within +-2 points of the bare request (confirmed); a gain of about 1 point is not
+    ruled out."""
     return request.with_question(persona + " " + request.question)
 
 
 def add_emphasis(request: Request, prefix: str = EMPHASIS) -> Request:
-    """DON'T: ALL-CAPS emphasis. No measurable effect (confirmatory equivalence test)."""
+    """DON'T: ALL-CAPS emphasis. Within +-2 points of the bare request on fresh items (Run 8)."""
     return request.with_question(prefix + " " + request.question)
 
 

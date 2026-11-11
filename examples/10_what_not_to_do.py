@@ -1,11 +1,13 @@
 """10: what NOT to do. Benign wrappers add no information, so they stayed within +-2 points; wrong labels remove
 information, so they hurt.
 
-In the paper (confirmatory): persona, ALL-CAPS emphasis and politeness each stayed within +-2 accuracy points of
-the bare request (Run 1; and five personas and five politeness prefixes on four more datasets, Run 3), and wrong
-labels on the three nearest shown examples cost 13 to 34 points (Run 1). Relabelling one, two and three of three
-correct shown examples cost 2.9, 11.4 and 38.2 points (Run 3; slope confirmed, cumulative values descriptive).
-This covers pre-defined benign wrappers only: reworded rules and decision-relevant context do move the model.
+Don't 1 and Do 3 in the paper: five personas and five politeness prefixes stayed within +-2 accuracy points of the
+bare request on fresh items of four datasets (Run 3, confirmed), and so did a capitals line on fresh items (Run 8).
+Wrong labels hurt: on the three nearest shown examples they cost 33.5 and 13.4 points (Run 1); relabelling one, two
+and three of three correct shown examples cost 2.9, 11.4 and 38.2 (Run 3; slope confirmed); and 30% confusable wrong
+labels in a pool cost 7.0 on Jev and harmed all six other models tested (Run 8). Here the wrong labels are spread
+over rivals; piling them on one rival costs more (Don't 3). This covers benign wrappers only: reworded rules and
+decision-relevant context do move the model.
 """
 from _common import backend_from_args, show
 

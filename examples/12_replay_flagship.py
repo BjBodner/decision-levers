@@ -5,7 +5,7 @@
                                                     # about 3,200 input tokens, roughly $0.0001 at list price)
 
 The file ``real_payloads/flagship_banking77.json`` holds the exact wire bodies the paper sent and the answers Jev
-returned (Figure 4 of the paper): bare, with three retrieved correctly labelled examples, and with the same three
+returned (Figure 3 of the paper): bare, with three retrieved correctly labelled examples, and with the same three
 texts under wrong labels. Offline, the script prints what changed between the requests, the recorded answers, and
 checks that this package's ``Request`` rebuilds each body byte for byte. ``--jev`` re-sends them through a pinned
 ``JevBackend``; expect small differences, since identical resends kept the argmax for 97.3 to 99.6% of requests.

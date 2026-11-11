@@ -7,7 +7,7 @@ answer. Targets:
   every item (the paper's rule used 0.005, i.e. half a point);
 * ``min_recall`` and/or ``min_precision`` with ``positive``: the smallest share sent that keeps the recall and/or
   the precision of a rare class at or above a floor. Use these for rare positives: an accuracy-chosen threshold kept
-  accuracy on a moderation set but cost 7.3 points of precision and most of the ranking quality (exploratory).
+  accuracy on a moderation set but cost 7.3 points of precision and most of the ranking quality (observed).
 
 **Thresholds chosen on the same items they are scored on are optimistic.** ``fit`` picks the threshold that just
 meets the target on the calibration items, so its own report flatters it (the paper calls these numbers "optimistic

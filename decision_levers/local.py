@@ -1,11 +1,10 @@
 """Local models and the "one bare call, combined locally" approach.
 
 ``combine(bare, vote, lr)`` multiplies the bare model's answer (its prior knowledge) by local evidence from the
-labelled pool. In the paper this plain product was no more than 1.5 points below the retrieval prompt at 100 labels
-per class on tweets and complaints (non-inferior, Run 2, item-level clusters); on four further datasets (Run 3) the
-estimate was inconclusive, and on Banking77, CLINC150 and ToxicChat it trailed by 0.8 to 1.5 points (exploratory).
-It sends only the item to the vendor, no pool text. On CFPB its recall on the smallest class trailed the prompt's by
-about 10 to 16 points (exploratory): check per-class recall on your own data.
+labelled pool. In the paper, at 100 labels per class, this plain product trailed the retrieval prompt by 0.7 points
+in both fresh-item tests (Runs 4 and 8), and neither showed it matching the prompt; its mean worst-class recall was
+29.7% against 42.8% for the prompt (secondary). Prefer the prompt unless privacy rules it out: the product sends
+only the item to the vendor, no pool text. Check per-class recall on your own data.
 
 ``tempered_combine`` / ``combine(..., weights=...)`` raise each input to an exponent; ``fit_exponents`` fits them by
 cross-validation on your own held-out labelled items.
@@ -119,7 +118,7 @@ class TunedLR:
 # The paper's frozen exponents for the tempered product at about 100 labels per class: alpha (bare), beta (vote),
 # gamma (tuned LR). Each is the median of 60 cross-fitted fits (12 dataset rows x 5 cluster folds, gold log-loss on
 # Jev 1.13 answers, the dense prior-corrected vote and LR); frozen for the paper's fourth run. Rounded: 0.358 /
-# 0.131 / 0.620. Exploratory: there is no frozen set at 5 per class, and they were fitted with the paper's dense
+# 0.131 / 0.620. Observed: there is no frozen set at 5 per class, and they were fitted with the paper's dense
 # features, so refit them on your own held-out data (``fit_exponents``) before relying on them.
 PAPER_EXPONENTS = (0.3579, 0.1310, 0.6201)
 
@@ -128,7 +127,8 @@ def combine(bare: Mapping[str, float], *experts: Mapping[str, float], eps: float
             weights: Sequence[float] | str | None = None) -> Probs:
     """Product of experts: ``(bare + eps) * (expert_1 + eps) * ...``, renormalised over the bare answer's options.
     ``combine(bare, vote, lr)`` is the paper's "bare x vote x tuned LR" (one bare call, no example text sent), the
-    plain product that was non-inferior to the prompt in Run 2 (G5).
+    plain product of its label-budget tests (G5). It passed on Run 2's items only with items resampled, and was not
+    shown to match the prompt on fresh items (-0.7 in Runs 4 and 8).
 
     ``weights=(a, b, c, ...)``, one per input (bare first), gives the TEMPERED product
     ``(bare + eps)^a * (expert_1 + eps)^b * ...``, renormalised; ``weights="paper"`` uses ``PAPER_EXPONENTS`` and
@@ -157,8 +157,9 @@ def combine(bare: Mapping[str, float], *experts: Mapping[str, float], eps: float
 def tempered_combine(bare: Mapping[str, float], vote: Mapping[str, float], lr: Mapping[str, float],
                      weights: Sequence[float] = PAPER_EXPONENTS, eps: float = 1e-3) -> Probs:
     """``bare^a * vote^b * LR^c`` (each + ``eps``), renormalised; defaults to the paper's frozen exponents
-    (``PAPER_EXPONENTS``, about 100 labels per class). Exploratory: in the paper's cross-fitted analysis it closed
-    the gap to the prompt on Banking77 (+0.2) and Run 2 ToxicChat (-0.4) but not on CLINC150 (-0.9)."""
+    (``PAPER_EXPONENTS``, about 100 labels per class). Observed: in the paper's cross-fitted analysis it closed the
+    gap to the prompt on Banking77 (+0.2) and Run 2 ToxicChat (-0.4) but not on CLINC150 (-0.9); with the frozen
+    exponents on Run 4's fresh items it was -0.4 [-1.2, +0.3] (secondary)."""
     return combine(bare, vote, lr, eps=eps, weights=weights)
 
 

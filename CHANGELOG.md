@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.3.0 (unreleased)
+
+Synced with paper v24, "Rules of Thumb for Decision Models: What Makes Performance Better (or Worse)". Every number
+added to the README and docs is quoted from v24. Code behaviour is unchanged: only docstrings and comments were edited.
+
+**Docs**
+
+- README rewritten as a practitioner page for v24: a plain summary; "How a call works" (the paper's Figure 2, with a
+  diagram of the request, where information goes and the optional pool step); the six do's and six don'ts of Table
+  2 with evidence and status, each mapped to the function or example that implements it, or marked "guidance
+  only"; "Which approach?" by label budget (Section 5: use the prompt at 5 per class; at 100 per class prefer it
+  unless privacy rules it out); "Results across models" (Section 6) and the leakage check on four private datasets
+  (Section 7), with the caveat that examples misled two models on long texts; "What didn't work" (Table 7); cost
+  from the paper's Figure 4; model versions, now including Jev 1.14 and the other models the paper tested.
+- Status words follow the paper: confirmed, observed, secondary, not shown. "Pre-registered" and "exploratory" are
+  replaced by "planned in advance" and "observed".
+- `docs/what_not_to_do.md` rewritten and shortened: pool noise and the one-rival penalty across models, placement,
+  stale shares, names without meaning (the names and descriptions experiment), the long-text failure mode and the
+  leakage check.
+- `docs/why_it_works.md` updated: the prior and evidence idea in plain words, the Appendix I.13 model with v24's
+  numbers (ε = 0.0225), placement, other models, the long-text failure mode and the leakage check.
+- `docs/algorithms.md`: the cluster note in the paired bootstrap now matches v24 (gold classes in Runs 3 to 8, and
+  the class bootstrap is too liberal with few classes); the tempered product is labelled observed.
+- `examples/real_payloads/README.md` and `examples/12`: the worked example is the paper's Figure 3.
+
+**Docstrings and comments (text only)**
+
+- Package description and `__init__` docstring use the new title; version 0.3.0.
+- `combine`, `local.py`, `examples/05`: the local combination trailed the prompt by 0.7 points in both fresh-item
+  tests; it is no longer described as non-inferior.
+- `rename_to_ids`, `examples/03`: ids with a description are one of several naming options, not the headline;
+  readable names with a one-line description are the default.
+- `examples/02`, `04`, `06`, `07`, `08`, `10`, `shortlist.py`, `levers.py` (wrapper and packing docstrings),
+  `evaluate.holm`, `PAPER_MODEL` comment: claims and status words matched to v24.
+
 ## 0.2.0 (unreleased)
 
 Synced with the paper's v11: Run 3 results, corrected numbers, and the repo critique of the practitioner review.

@@ -1,9 +1,8 @@
 """Labels-only shortlist: restrict the options to the labels of the k nearest pool neighbours, without sending
 any example text. If all k neighbours share one label, answer locally and skip the call.
 
-In the paper (exploratory) this kept short-intent sets within about 2.5 points of the kNN-20 prompt at about 5%
-of its tokens, with about 80% of items needing no call. It HURT topical text (tweets: below the bare model),
-where the gold label was often not among the neighbours' labels.
+In the paper (observed) this lost 2.2 and 2.4 points against the kNN-20 prompt on Banking77 and CLINC150 at about
+5% of its tokens, and it sends no pool text. It HURT topical text (tweets: 70.9% bare, 69.3% with the shortlist).
 """
 from __future__ import annotations
 
