@@ -54,18 +54,22 @@ Fitted to 40,340 responses from Runs 1 and 2 (Banking77, CLINC150, tweets, CFPB)
 
 ## Beyond Jev
 
-- **Other decision models.** The harms transfer best: confusable pool noise and the one-rival penalty hurt on all
-  six other models tested, and on a general chat model. That suggests, but does not show, that they are properties
-  of evidence in the prompt rather than of typed decision APIs. The model above was fitted on Jev only, and the
-  sizes differ by model: the one-rival penalty was smaller on every other model than on Jev.
+- **Other decision models.** The harms carry over best: confusable pool noise and the one-rival penalty hurt on all
+  six other models tested on fresh items, and on a chat model (the one-rival penalty on 5 of 6 on private data).
+  That suggests, but does not show, that they are properties of evidence in the prompt rather than of typed decision
+  APIs. The model above was fitted on Jev only, and the sizes differ by model: the one-rival penalty was smaller on
+  every other model than on Jev, though scaled by each model's clean gain, Jev's loss can't be told apart from the
+  two Perplexity models'.
 - **Models that do not read examples as evidence.** On long private texts, Decider Flash steered away from the
   option its examples supported, and d1-ultra piled its answers onto one option. Neither fits a prior-plus-evidence
   account. Test examples on your model before you rely on them.
-- **Leakage.** On four private synthetic datasets, eight models ranked eight techniques much as on public data
-  (rank correlations 0.76 to 1.00). Descriptions helped more on private data (+7.6 against +1.0 on the six
-  others), which leakage would predict, but the names experiment points to a simpler cause: half of each private
-  name was an invented word, so the description carried the meaning. Leakage is not ruled out. The one-rival
-  penalty moved in the direction opposite to what leakage would predict.
+- **Leakage.** On four private synthetic datasets, eight models ranked eight techniques much as on public data (rank
+  correlations 0.76 to 1.00; 0.49 to 0.94 on the six other models without the two largest effects), so leakage
+  doesn't seem to drive the results. The paper's planned distortion test still flagged two techniques. Descriptions
+  helped more on private data (+7.6 against +1.0 on the six others), which leakage would predict, but the names
+  experiment points to a simpler cause: on OpsDeck half of each tool name was an invented brand word, so the
+  description carried the meaning. Leakage isn't ruled out. The one-rival penalty was smaller on private data on
+  three models, the opposite of what leakage would predict.
 
 ## What it does not license
 

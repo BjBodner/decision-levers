@@ -1,13 +1,21 @@
 # Changelog
 
-## 0.3.0 (unreleased)
+## 0.3.0 (unreleased): synced with paper v26
 
-Synced with paper v24, "Rules of Thumb for Decision Models: What Makes Performance Better (or Worse)". Every number
-added to the README and docs is quoted from v24. Code behaviour is unchanged: only docstrings and comments were edited.
+Synced with paper v26, "Rules of Thumb for Decision Models: What Makes Performance Better (or Worse)". Every number
+in the README and docs is quoted from v26, apart from the package constant `PAPER_EXPONENTS`. Code behaviour is
+unchanged: only docstrings and comments were edited.
+
+- **v25 and v26 revisions** (first synced at v24): "ten planned runs" (eight public, two private); the one-rival
+  penalty on 6 of 6 others on fresh items and 5 of 6 on private data (Kev-4B reversed); Do 5 is "local match not
+  shown"; leakage is "unlikely" (rank correlations 0.76 to 1.00, 0.49 without the two largest effects; the planned
+  distortion test flagged two techniques); descriptions scoped to two tool catalogues; status words defined in
+  plain words; "bare call" throughout; and the paper's plainer wording ("three-example test", "unrelated
+  questions", "on the central estimate", "an attack search that never saw the scores").
 
 **Docs**
 
-- README rewritten as a practitioner page for v24: a plain summary; "How a call works" (the paper's Figure 2, with a
+- README rewritten as a practitioner page for v26: a plain summary; "How a call works" (the paper's Figure 2, with a
   diagram of the request, where information goes and the optional pool step); the six do's and six don'ts of Table
   2 with evidence and status, each mapped to the function or example that implements it, or marked "guidance
   only"; "Which approach?" by label budget (Section 5: use the prompt at 5 per class; at 100 per class prefer it
@@ -19,9 +27,9 @@ added to the README and docs is quoted from v24. Code behaviour is unchanged: on
 - `docs/what_not_to_do.md` rewritten and shortened: pool noise and the one-rival penalty across models, placement,
   stale shares, names without meaning (the names and descriptions experiment), the long-text failure mode and the
   leakage check.
-- `docs/why_it_works.md` updated: the prior and evidence idea in plain words, the Appendix I.13 model with v24's
+- `docs/why_it_works.md` updated: the prior and evidence idea in plain words, the Appendix I.13 model with v26's
   numbers (ε = 0.0225), placement, other models, the long-text failure mode and the leakage check.
-- `docs/algorithms.md`: the cluster note in the paired bootstrap now matches v24 (gold classes in Runs 3 to 8, and
+- `docs/algorithms.md`: the cluster note in the paired bootstrap now matches v26 (gold classes in Runs 3 to 8, and
   the class bootstrap is too liberal with few classes); the tempered product is labelled observed.
 - `examples/real_payloads/README.md` and `examples/12`: the worked example is the paper's Figure 3.
 
@@ -33,7 +41,7 @@ added to the README and docs is quoted from v24. Code behaviour is unchanged: on
 - `rename_to_ids`, `examples/03`: ids with a description are one of several naming options, not the headline;
   readable names with a one-line description are the default.
 - `examples/02`, `04`, `06`, `07`, `08`, `10`, `shortlist.py`, `levers.py` (wrapper and packing docstrings),
-  `evaluate.holm`, `PAPER_MODEL` comment: claims and status words matched to v24.
+  `evaluate.holm`, `PAPER_MODEL` comment: claims and status words matched to v26.
 
 ## 0.2.0 (unreleased)
 

@@ -111,7 +111,8 @@ Output:  e over O
 2. e <- e / sum(e)
 Note: no pool text is sent to the vendor; the bare call sends the item.
 Tempered variant (observed): e(o) <- (p(o) + eps)^a * (v(o) + eps)^b * (f(x)(o) + eps)^c, renormalised;
-   the paper's frozen exponents at about 100 labels per class are (a, b, c) = (0.358, 0.131, 0.620).
+   the exponents frozen before the paper's Run 4, at about 100 labels per class, are the package constant
+   PAPER_EXPONENTS, (a, b, c) = (0.358, 0.131, 0.620).
 ```
 `combine(bare, vote, lr)`; tempered: `tempered_combine(bare, vote, lr)` or `combine(..., weights=(a, b, c))`.
 
@@ -229,7 +230,7 @@ Screen (development items):
        (and, with several instruction paraphrases, the sign agrees across them)
 Freeze:
 3. write down each hypothesis, test type (superiority / non-inferiority / equivalence), margin, item set,
-   exact request texts and thresholds; hash them (SHA-256) before any confirmatory call
+   exact request texts and thresholds; hash them (SHA-256) before the first call of a planned test
 Confirm (held-out items never used above):
 4. run exactly the frozen arms; score paired accuracy with Algorithm 13
 5. Holm step-down over the whole family at alpha = 0.05; report every test, including the failures

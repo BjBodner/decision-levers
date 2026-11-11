@@ -2,7 +2,7 @@
 
 ``combine(bare, vote, lr)`` multiplies the bare model's answer (its prior knowledge) by local evidence from the
 labelled pool. In the paper, at 100 labels per class, this plain product trailed the retrieval prompt by 0.7 points
-in both fresh-item tests (Runs 4 and 8), and neither showed it matching the prompt; its mean worst-class recall was
+in both fresh-item tests (Runs 4 and 8), so it can't be called a match; its mean worst-class recall was
 29.7% against 42.8% for the prompt (secondary). Prefer the prompt unless privacy rules it out: the product sends
 only the item to the vendor, no pool text. Check per-class recall on your own data.
 

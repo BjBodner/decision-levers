@@ -69,9 +69,9 @@ def add_definitions(request: Request, defs: Mapping[str, str]) -> Request:
 def rename_to_ids(request: Request, prefix: str = "option_") -> tuple[Request, dict[str, str]]:
     """Replace option names by neutral ids (``option_01``.. in alphabetical order of the names), keeping the
     request's option order and descriptions. Returns the new request and ``id -> original name``. Ids WITHOUT
-    definitions collapse accuracy (2.1% on the paper's invented catalogue). With a one-line description ids did as
-    well as names in the paper's names experiment, but were 2.3 points below names on fresh items (not shown within
-    2), so readable names with descriptions stay the default."""
+    definitions collapse accuracy (2.1% on the paper's invented catalogue). With a one-line description ids came
+    within a point of names in the paper's names experiment, but were 2.3 points below names on fresh items (not
+    shown within 2), so readable names with descriptions stay the default."""
     names = sorted(request.options or {})
     to_id = {n: f"{prefix}{i + 1:02d}" for i, n in enumerate(names)}
     req = request.with_options({to_id[o]: d for o, d in (request.options or {}).items()})

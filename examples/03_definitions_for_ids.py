@@ -4,8 +4,8 @@ one-line description, cryptic ids, and ids with a description.
 Do 2: name options by what they do, and add a one-line description, above all for unfamiliar, invented or
 brand-like names. In the paper (Run 9, secondary) a description added 10.7 points to MetaTool's tool names and 23.8
 on an invented catalogue; names cut to an invented brand word fell to 5.0%, close to the 2.1% of cryptic ids. Ids
-with a description did about as well as names with one there, but were 2.3 points below on fresh items (Run 8, not
-shown within 2), so ids with descriptions are one option, not the default.
+with a description came within a point of names with one there, but were 2.3 points below on fresh items (Run 8,
+not shown within 2), so ids with descriptions are one option, not the default.
 """
 from _common import backend_from_args, show
 
